@@ -1,0 +1,30 @@
+.connect-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.connect-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease;
+}
+
+.connect-pill:hover {
+  border-color: var(--baseline);
+}
+
+.connect-pill-connected {
+  border-color: color-mix(in srgb, var(--status-good) 40%, transparent);
+  background: color-mix(in srgb, var(--status-good) 10%, var(--surface-1));
+  color: var(--good-text);
+}

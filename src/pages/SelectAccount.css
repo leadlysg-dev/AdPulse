@@ -1,0 +1,68 @@
+.select-account-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--page-plane);
+}
+
+.select-account-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 36px 32px;
+}
+
+.select-account-card h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.select-account-sub {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.select-account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.select-account-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.select-account-option:hover {
+  border-color: var(--baseline);
+}
+
+.select-account-option.selected {
+  border-color: var(--series-1);
+  background: color-mix(in srgb, var(--series-1) 8%, var(--surface-1));
+}
+
+.select-account-name {
+  font-size: 14px;
+}
+
+.select-account-id {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.select-account-skeleton-row {
+  height: 52px;
+  border-radius: var(--radius-md);
+}

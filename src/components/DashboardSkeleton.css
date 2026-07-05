@@ -1,0 +1,43 @@
+.dash-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.skeleton-tile {
+  height: 88px;
+}
+
+.skeleton-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.skeleton-chart {
+  height: 240px;
+}
+
+.skeleton-chart-wide {
+  height: 96px;
+}
+
+@media (max-width: 720px) {
+  .skeleton-grid,
+  .skeleton-charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .skeleton-grid,
+  .skeleton-charts {
+    grid-template-columns: 1fr;
+  }
+}

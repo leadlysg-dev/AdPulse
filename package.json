@@ -3,11 +3,20 @@
   "version": "1.0.0",
   "description": "AdPulse - self-serve Meta + Google Ads reporting dashboard SaaS",
   "scripts": {
-    "dev": "netlify dev"
+    "dev": "netlify dev",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@netlify/blobs": "^7.3.0",
+    "jsonwebtoken": "^9.0.2",
     "node-fetch": "^2.7.0",
-    "jsonwebtoken": "^9.0.2"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.3",
+    "vite": "^8.1.3"
   }
 }
