@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AdPulse dashboard</title>
+<style>
+  :root { --ink:#0b0b0b; --muted:#5f5e5a; --bg:#fcfcfb; --card:#ffffff; --tile:#f1efe8; --border:#e1e0d9; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px; }
+  .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .top h1 { font-size:18px; margin:0; }
+  .pill { font-size:12px; padding:4px 10px; border-radius:20px; background:var(--tile); color:var(--muted); }
+  .pill.demo { background:#faeeda; color:#854f0b; }
+  .grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; margin-bottom:24px; }
+  .tile { background:var(--tile); border-radius:10px; padding:16px; }
+  .tile .label { font-size:12px; color:var(--muted); margin:0 0 4px; }
+  .tile .value { font-size:22px; font-weight:600; margin:0; }
+  .connect-row { display:flex; gap:10px; margin-bottom:24px; }
+  .connect-row a { text-decoration:none; font-size:13px; padding:8px 14px; border-radius:8px; border:1px solid var(--border); color:var(--ink); background:#fff; }
+  .connect-row a.connected { border-color:#639922; color:#3b6d11; background:#eaf3de; }
+  canvas { max-width:100%; }
+  .note { font-size:12px; color:var(--muted); margin-top:24px; }
+  @media (max-width: 560px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Your ad performance</h1>
+    <span id="modePill" class="pill">Loading…</span>
+  </div>
+
+  <div class="connect-row">
+    <a id="metaBtn" href="/.netlify/functions/auth-meta">Connect Meta</a>
+    <a id="googleBtn" href="/.netlify/functions/auth-google">Connect Google</a>
+  </div>
+
+  <div class="grid" id="metricGrid"></div>
+
+  <canvas id="perfChart" height="90" role="img" aria-label="Weekly leads and spend trend"></canvas>
+
+  <p class="note" id="demoNote"></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+async function loadStatus() {
+  const res = await fetch('/.netlify/functions/get-status');
+  const status = await res.json();
+  document.getElementById('metaBtn').classList.toggle('connected', status.metaConnected);
+  document.getElementById('metaBtn').textContent = status.metaConnected ? 'Meta connected ✓' : 'Connect Meta';
+  document.getElementById('googleBtn').classList.toggle('connected', status.googleConnected);
+  document.getElementById('googleBtn').textContent = status.googleConnected ? 'Google connected ✓' : 'Connect Google';
+}
+
+async function loadData() {
+  const res = await fetch('/.netlify/functions/get-dashboard-data');
+  const data = await res.json();
+
+  const pill = document.getElementById('modePill');
+  pill.textContent = data.isDemo ? 'Demo data' : 'Live data';
+  pill.classList.toggle('demo', data.isDemo);
+
+  document.getElementById('demoNote').textContent = data.isDemo
+    ? 'This is sample data. Connect Meta and Google above to see your real numbers.'
+    : '';
+
+  const grid = document.getElementById('metricGrid');
+  grid.innerHTML = `
+    <div class="tile"><p class="label">Leads (last 30 days)</p><p class="value">${data.leads}</p></div>
+    <div class="tile"><p class="label">Ad spend</p><p class="value">$${data.spend.toLocaleString()}</p></div>
+    <div class="tile"><p class="label">Cost per lead</p><p class="value">$${data.costPerLead}</p></div>
+    <div class="tile"><p class="label">Meta / Google split</p><p class="value" style="font-size:15px;">$${data.metaSpend} / $${data.googleSpend}</p></div>
+  `;
+
+  new Chart(document.getElementById('perfChart'), {
+    type: 'line',
+    data: {
+      labels: data.weekly.labels,
+      datasets: [
+        { label: 'Leads', data: data.weekly.leads, borderColor: '#2a78d6', backgroundColor:'rgba(42,120,214,0.08)', fill:true, tension:0.3 },
+        { label: 'Spend ($)', data: data.weekly.spend, borderColor: '#eb6834', backgroundColor:'rgba(235,104,52,0.08)', fill:true, tension:0.3, borderDash:[4,3] }
+      ]
+    },
+    options: { responsive:true, plugins:{ legend:{ display:true, position:'top' } } }
+  });
+}
+
+loadStatus();
+loadData();
+</script>
+</body>
+</html>

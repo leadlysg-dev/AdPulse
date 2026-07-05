@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AdPulse — see your ad performance in one place</title>
+<style>
+  :root { --ink:#0b0b0b; --muted:#5f5e5a; --bg:#fcfcfb; --card:#ffffff; --border:#e1e0d9; --accent:#2a78d6; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 64px 24px; text-align: center; }
+  h1 { font-size: 28px; font-weight: 600; margin: 0 0 12px; }
+  p.sub { color: var(--muted); font-size: 16px; margin: 0 0 40px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 16px; text-align: left; }
+  .card h2 { font-size: 16px; margin: 0 0 4px; }
+  .card p { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+  a.btn { display: inline-flex; align-items:center; gap:8px; text-decoration:none; background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 500; }
+  a.btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+  .footnote { margin-top: 32px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>See every lead and every ad dollar, in one dashboard</h1>
+    <p class="sub">Connect your Meta and Google ad accounts. No API keys to copy, no spreadsheets to update — it just stays current.</p>
+
+    <div class="card">
+      <h2>1. Connect Meta ads</h2>
+      <p>You'll be sent to Facebook's own login screen. AdPulse never sees your password.</p>
+      <a class="btn" href="/.netlify/functions/auth-meta">Connect Meta</a>
+    </div>
+
+    <div class="card">
+      <h2>2. Connect Google ads</h2>
+      <p>You'll be sent to Google's own login screen. Same deal — no keys, no copy-pasting.</p>
+      <a class="btn secondary" href="/.netlify/functions/auth-google">Connect Google</a>
+    </div>
+
+    <a class="btn secondary" href="/dashboard.html">Go to my dashboard →</a>
+
+    <p class="footnote">By connecting an account you're only granting read-access to reporting data — AdPulse cannot create, edit, or spend on your campaigns.</p>
+  </div>
+</body>
+</html>

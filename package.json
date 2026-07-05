@@ -1,0 +1,12 @@
+{
+  "name": "adpulse",
+  "version": "1.0.0",
+  "description": "AdPulse - self-serve Meta + Google Ads reporting dashboard SaaS",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^7.3.0",
+    "node-fetch": "^2.7.0"
+  }
+}
