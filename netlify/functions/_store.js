@@ -2,58 +2,19 @@
 // customer's connected ad accounts. Everything is keyed by email, so a
 // customer sees the same data no matter which device or browser they log in
 // from - and can never see another customer's data.
-const crypto = require('crypto');
+//
+// Storage lives in Supabase Postgres (_store-supabase.js). The original
+// Netlify Blobs backend (_store-blobs.js) is kept as a fallback: set
+// STORAGE_BACKEND=blobs in Netlify's environment variables to switch back
+// without touching code. Sessions are stateless JWTs and never touch
+// storage, so they work identically on both backends.
 const jwt = require('jsonwebtoken');
-const { getStore } = require('@netlify/blobs');
+const { verifyPassword } = require('./_password');
 
-function usersStore() {
-  const siteID = process.env.NETLIFY_SITE_ID;
-  const token = process.env.NETLIFY_BLOBS_TOKEN;
-  if (siteID && token) {
-    return getStore({ name: 'adpulse-users', siteID, token });
-  }
-  return getStore('adpulse-users');
-}
-
-// --- Passwords ---
-// scrypt is built into Node - no extra dependency needed for safe password hashing.
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
-}
-
-function verifyPassword(password, stored) {
-  const [salt, hash] = stored.split(':');
-  const check = crypto.scryptSync(password, salt, 64).toString('hex');
-  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(check));
-}
-
-// --- Users ---
-async function getUser(email) {
-  const store = usersStore();
-  return await store.get(email.toLowerCase(), { type: 'json' });
-}
-
-async function createUser(email, password) {
-  const store = usersStore();
-  const key = email.toLowerCase();
-  const existing = await store.get(key, { type: 'json' });
-  if (existing) throw new Error('An account with that email already exists.');
-  const user = {
-    email: key,
-    passwordHash: hashPassword(password),
-    createdAt: new Date().toISOString(),
-    accounts: {} // provider -> { accessToken, refreshToken, adAccounts: [...], selectedAdAccountId }
-  };
-  await store.setJSON(key, user);
-  return user;
-}
-
-async function saveUser(user) {
-  const store = usersStore();
-  await store.setJSON(user.email, user);
-}
+const backend =
+  process.env.STORAGE_BACKEND === 'blobs'
+    ? require('./_store-blobs')
+    : require('./_store-supabase');
 
 // --- Sessions (JWT stored in an httpOnly cookie) ---
 function createSessionCookie(email) {
@@ -78,9 +39,9 @@ function getEmailFromRequest(headers) {
 }
 
 module.exports = {
-  getUser,
-  createUser,
-  saveUser,
+  getUser: backend.getUser,
+  createUser: backend.createUser,
+  saveUser: backend.saveUser,
   verifyPassword,
   createSessionCookie,
   clearSessionCookie,

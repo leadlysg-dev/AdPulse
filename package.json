@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@netlify/blobs": "^7.3.0",
+    "@supabase/supabase-js": "^2.110.0",
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^2.7.0",
     "react": "^19.2.7",

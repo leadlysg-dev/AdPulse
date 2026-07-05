@@ -75,6 +75,16 @@ It is free.
    - `GOOGLE_REDIRECT_URI` → `https://YOUR-SITE.netlify.app/.netlify/functions/auth-google-callback`
    - `GOOGLE_ADS_DEVELOPER_TOKEN`
    - `SESSION_SECRET` → any long random string
+   - `SUPABASE_URL` → your Supabase project URL (Project Settings → API)
+   - `SUPABASE_SECRET_KEY` → your Supabase secret/service key (never the
+     public anon key)
+
+   Before the first deploy with Supabase, run `supabase-schema.sql` (repo
+   root) once in the Supabase SQL editor to create the tables.
+
+   If anything goes wrong with the database, set `STORAGE_BACKEND=blobs`
+   to switch storage back to Netlify Blobs without a code change (Netlify
+   redeploys automatically when you save the variable).
 3. Redeploy the site (Netlify does this automatically after saving env vars,
    or trigger a manual redeploy).
 
