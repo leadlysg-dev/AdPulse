@@ -1,0 +1,194 @@
+.kpi-card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s ease;
+  min-width: 0;
+}
+
+.kpi-card:hover {
+  border-color: var(--baseline);
+}
+
+/* Selection = which metric the chart shows. Accent ring, not a color wash. */
+.kpi-selected,
+.kpi-selected:hover {
+  border-color: var(--series-1);
+  box-shadow: 0 0 0 1px var(--series-1);
+}
+
+.kpi-card:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
+}
+
+/* Hero: the primary metric. Bigger in every dimension that matters,
+   without decoration. */
+.kpi-hero {
+  grid-column: span 2;
+  padding: 20px 22px;
+  gap: 6px;
+}
+
+.kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-hero .kpi-label {
+  font-size: 13px;
+}
+
+.kpi-value {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.kpi-hero .kpi-value {
+  font-size: 40px;
+  letter-spacing: -0.02em;
+}
+
+.kpi-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.kpi-delta {
+  font-weight: 600;
+}
+
+.kpi-delta-good {
+  color: var(--good-text);
+}
+
+.kpi-delta-bad {
+  color: var(--status-critical);
+}
+
+.kpi-delta-neutral {
+  color: var(--text-muted);
+}
+
+.kpi-costper {
+  color: var(--text-muted);
+}
+
+.kpi-goal-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.kpi-goal-good {
+  color: var(--good-text);
+  background: color-mix(in srgb, var(--status-good) 12%, var(--surface-1));
+}
+
+.kpi-goal-warn {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--status-warning) 22%, var(--surface-1));
+}
+
+.kpi-goal-bad {
+  color: var(--status-critical);
+  background: color-mix(in srgb, var(--status-critical) 12%, var(--surface-1));
+}
+
+.kpi-goal-neutral {
+  color: var(--text-muted);
+  background: var(--gridline);
+}
+
+.kpi-goal-edit {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.kpi-goal-edit:hover {
+  color: var(--text-primary);
+}
+
+.kpi-goal-form {
+  margin-top: 6px;
+  cursor: default;
+}
+
+.kpi-goal-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpi-goal-prefix {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.kpi-goal-row input {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.kpi-goal-save {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.kpi-goal-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.kpi-goal-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.kpi-goal-link:hover {
+  color: var(--text-primary);
+}
+
+.kpi-goal-error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--status-critical);
+}

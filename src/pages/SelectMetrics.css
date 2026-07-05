@@ -26,13 +26,28 @@
   line-height: 1.5;
 }
 
+.select-metrics-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-bottom: 24px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.metric-group-heading {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
 .select-metrics-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 20px;
-  max-height: 420px;
-  overflow-y: auto;
 }
 
 .metric-option {

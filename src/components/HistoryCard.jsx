@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import WeeklyBars from './WeeklyBars';
 import ErrorState from './ErrorState';
-import { fmtDate, money, number, metricColor } from '../lib/format';
+import { fmtDate, money, number } from '../lib/format';
 import './HistoryCard.css';
 
-export default function HistoryCard({ history, error, onRetry }) {
+// focusMetricId: which tracked metric the charts show (progressive
+// disclosure - the table still carries every metric). null = spend only.
+export default function HistoryCard({ history, error, onRetry, focusMetricId }) {
   const [showTable, setShowTable] = useState(false);
 
   if (error) {
@@ -26,6 +28,7 @@ export default function HistoryCard({ history, error, onRetry }) {
   }
 
   const { weeks, metrics } = history;
+  const focusMetric = metrics.find((m) => m.id === focusMetricId) || null;
 
   return (
     <section className="history-section">
@@ -72,16 +75,16 @@ export default function HistoryCard({ history, error, onRetry }) {
           </div>
         ) : (
           <div className="history-charts">
-            {metrics.map((m, i) => (
+            {focusMetric && (
               <WeeklyBars
-                key={m.id}
-                title={`${m.label} by week`}
+                key={focusMetric.id}
+                title={`${focusMetric.label} by week`}
                 weeks={weeks}
-                getValue={(w) => w.values[m.id] || 0}
-                color={metricColor(i)}
+                getValue={(w) => w.values[focusMetric.id] || 0}
+                color="var(--series-1)"
                 formatValue={number}
               />
-            ))}
+            )}
             <WeeklyBars
               title="Spend by week"
               weeks={weeks}

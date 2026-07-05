@@ -23,8 +23,11 @@
   border-color: var(--baseline);
 }
 
+/* Connected is a state, not a performance signal - green stays reserved
+   for goal/prior-period status, so this chip is quiet and neutral. */
 .connect-pill-connected {
-  border-color: color-mix(in srgb, var(--status-good) 40%, transparent);
-  background: color-mix(in srgb, var(--status-good) 10%, var(--surface-1));
-  color: var(--good-text);
+  border-color: transparent;
+  background: var(--gridline);
+  color: var(--text-secondary);
+  font-weight: 400;
 }

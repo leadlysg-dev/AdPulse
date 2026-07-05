@@ -3,7 +3,7 @@ import './Insights.css';
 
 // A change smaller than this reads as noise, not news.
 const MIN_CHANGE = 5;
-const MAX_CALLOUTS = 4;
+const MAX_CALLOUTS = 3;
 
 function Arrow({ direction, tone }) {
   return (

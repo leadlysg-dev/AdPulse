@@ -38,7 +38,8 @@ create table public.selected_metrics (
   connected_account_id uuid not null references public.connected_accounts(id) on delete cascade,
   metric_id            text not null,          -- raw Meta action_type
   label                text not null,          -- friendly-name snapshot from the picker
-  position             int not null default 0, -- selection order drives chart colors
+  position             int not null default 0, -- selection order; first = primary KPI
+  target_cost_per      numeric,                -- optional goal: cost per result under $X
   unique (connected_account_id, metric_id)
 );
 

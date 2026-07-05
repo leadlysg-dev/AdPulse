@@ -1,18 +1,12 @@
-// Builds the account-specific conversion-metric checklist for the picker.
-// Meta has no "list every possible column" endpoint, so the list is merged
-// from three sources: action types that actually fired for this account in
-// the last 90 days (with their counts), the account's custom conversions
-// (so opaque offsite_conversion.custom.<id> types get their real names),
-// and a curated set of standard events that is always offered.
+// Builds the grouped, conversions-only checklist for the metric picker.
+// The offering comes from the allowlist catalog in _metrics.js: canonical
+// conversions (deduped across Meta's action-type aliases) plus the
+// account's custom conversions - engagement metrics never appear. Counts
+// come from the account's last 90 days of insights.
 const { getEmailFromRequest, getUser } = require('./_store');
 const { fmt, addDays } = require('./_dates');
 const { metaGet } = require('./_meta');
-const {
-  STANDARD_EVENTS,
-  IGNORED_ACTION_TYPES,
-  getSelectedMetrics,
-  prettifyActionType
-} = require('./_metrics');
+const { getSelectedMetrics, canonicalKeyFor, buildCatalogGroups } = require('./_metrics');
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -27,8 +21,10 @@ exports.handler = async (event) => {
   const provider = (event.queryStringParameters || {}).provider;
   if (provider === 'google') {
     // Live Google Ads data (including its conversion actions) isn't wired
-    // in yet - the frontend shows a "coming soon" state for this.
-    return json(200, { available: false, provider: 'google', options: [], selected: [] });
+    // in yet - the frontend shows a "coming soon" state for this. When it
+    // is wired, Google's conversion_action.category maps onto these same
+    // groups.
+    return json(200, { available: false, provider: 'google', groups: [], selected: [] });
   }
   if (provider !== 'meta') return json(400, { error: 'Unknown provider.' });
 
@@ -57,35 +53,30 @@ exports.handler = async (event) => {
       }).catch(() => []) // some accounts can't read custom conversions - not fatal
     ]);
 
-    const customNames = {};
-    customConversions.forEach((cc) => {
-      customNames[`offsite_conversion.custom.${cc.id}`] = cc.name;
-    });
-
     const observedCounts = {};
     ((insightRows[0] && insightRows[0].actions) || []).forEach((a) => {
-      if (!IGNORED_ACTION_TYPES.has(a.action_type)) {
-        observedCounts[a.action_type] = Number(a.value) || 0;
-      }
+      observedCounts[a.action_type] = Number(a.value) || 0;
     });
 
-    const options = new Map();
-    Object.entries(observedCounts).forEach(([id, count]) => {
-      options.set(id, { id, label: customNames[id] || prettifyActionType(id), count90d: count });
-    });
-    STANDARD_EVENTS.forEach((e) => {
-      if (!options.has(e.id)) options.set(e.id, { id: e.id, label: e.label, count90d: 0 });
-    });
+    const groups = buildCatalogGroups(observedCounts, customConversions);
 
-    // Metrics with recent activity first (most active on top), then the
-    // zero-count standard events in their curated order.
-    const list = [...options.values()].sort((a, b) => b.count90d - a.count90d);
+    // Pre-check the saved selection. Stored ids are raw action types and
+    // may be a different alias of the same conversion than the one offered
+    // today - match by canonical identity, not raw string.
+    const storedMetrics = getSelectedMetrics(meta);
+    const storedKeys = new Set(storedMetrics.map((m) => canonicalKeyFor(m.id)));
+    const selected = [];
+    groups.forEach((g) => {
+      g.options.forEach((opt) => {
+        if (storedKeys.has(canonicalKeyFor(opt.id))) selected.push(opt.id);
+      });
+    });
 
     return json(200, {
       available: true,
       provider: 'meta',
-      options: list,
-      selected: getSelectedMetrics(meta).map((m) => m.id),
+      groups,
+      selected,
       hasSavedSelection: Array.isArray(meta.selectedMetrics) && meta.selectedMetrics.length > 0
     });
   } catch (err) {

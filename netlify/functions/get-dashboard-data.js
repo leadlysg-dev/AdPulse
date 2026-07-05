@@ -75,6 +75,7 @@ exports.handler = async (event) => {
     const metrics = selectedMetrics.map((m) => ({
       id: m.id,
       label: m.label,
+      targetCostPer: m.targetCostPer != null ? m.targetCostPer : null,
       value: totals.values[m.id],
       previous: prev.values[m.id],
       costPer: costPer(totals.spend, totals.values[m.id]),

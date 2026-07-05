@@ -53,7 +53,11 @@ function assembleProvider(row) {
   if (row.refresh_token) provider.refreshToken = row.refresh_token;
   const metrics = (row.selected_metrics || [])
     .sort(byPosition)
-    .map((m) => ({ id: m.metric_id, label: m.label }));
+    .map((m) => {
+      const metric = { id: m.metric_id, label: m.label };
+      if (m.target_cost_per != null) metric.targetCostPer = Number(m.target_cost_per);
+      return metric;
+    });
   if (metrics.length) provider.selectedMetrics = metrics;
   return provider;
 }
@@ -72,7 +76,7 @@ async function getUser(email) {
     .select(
       'id, provider, access_token, refresh_token, selected_ad_account_id, connected_at, ' +
         'ad_accounts ( external_id, name, position ), ' +
-        'selected_metrics ( metric_id, label, position )'
+        'selected_metrics ( metric_id, label, position, target_cost_per )'
     )
     .eq('user_id', u.id);
   if (accError) fail(accError, 'loading connected accounts');
@@ -191,7 +195,8 @@ async function saveUser(user) {
             connected_account_id: row.id,
             metric_id: m.id,
             label: m.label,
-            position: i
+            position: i,
+            target_cost_per: m.targetCostPer != null ? m.targetCostPer : null
           }))
         );
       if (error) fail(error, `saving ${provider} metrics`);

@@ -80,7 +80,9 @@ It is free.
      public anon key)
 
    Before the first deploy with Supabase, run `supabase-schema.sql` (repo
-   root) once in the Supabase SQL editor to create the tables.
+   root) once in the Supabase SQL editor to create the tables. If you
+   created the tables before a migration file in `supabase-migrations/`
+   existed, run that file too (each one is safe to re-run).
 
    If anything goes wrong with the database, set `STORAGE_BACKEND=blobs`
    to switch storage back to Netlify Blobs without a code change (Netlify

@@ -67,6 +67,12 @@ export const api = {
       body: JSON.stringify({ provider, metrics })
     }),
 
+  setGoal: (provider, metricId, targetCostPer) =>
+    request('/.netlify/functions/set-goal', {
+      method: 'POST',
+      body: JSON.stringify({ provider, metricId, targetCostPer })
+    }),
+
   login: (email, password) =>
     request('/.netlify/functions/login', {
       method: 'POST',
