@@ -1,11 +1,12 @@
 // Active ads with their creative preview (thumbnail + headline/body) and
-// per-ad performance for the selected date range. Two Meta calls: one for
-// per-ad insights, one for the active ads' creatives, joined by ad id.
-// ads_read covers both - no extra permissions. Demo data when no account
-// is connected.
+// per-ad performance for the selected date range, reported against the
+// customer's own selected metrics. Two Meta calls: one for per-ad insights,
+// one for the active ads' creatives, joined by ad id. ads_read covers both.
+// Demo data when no account is connected.
 const { getEmailFromRequest, getUser } = require('./_store');
 const { VALID_RANGES, resolveRange } = require('./_dates');
-const { metaGet, readRow, costPerLead } = require('./_meta');
+const { metaGet, readRow } = require('./_meta');
+const { getSelectedMetrics } = require('./_metrics');
 const { demoAds } = require('./_demo');
 
 const json = (statusCode, body) => ({
@@ -27,6 +28,8 @@ exports.handler = async (event) => {
     return json(200, demoAds(range));
   }
 
+  const selectedMetrics = getSelectedMetrics(meta);
+  const metricIds = selectedMetrics.map((m) => m.id);
   const { since, until } = resolveRange(range);
 
   try {
@@ -48,12 +51,14 @@ exports.handler = async (event) => {
 
     const metricsByAd = {};
     insightRows.forEach((row) => {
-      metricsByAd[row.ad_id] = readRow(row);
+      metricsByAd[row.ad_id] = readRow(row, metricIds);
     });
+
+    const zeroValues = Object.fromEntries(metricIds.map((id) => [id, 0]));
 
     const ads = adRows
       .map((ad) => {
-        const m = metricsByAd[ad.id] || { spend: 0, leads: 0 };
+        const m = metricsByAd[ad.id] || { spend: 0, values: zeroValues };
         const creative = ad.creative || {};
         return {
           id: ad.id,
@@ -62,13 +67,12 @@ exports.handler = async (event) => {
           body: creative.body || null,
           thumbnailUrl: creative.thumbnail_url || null,
           spend: +m.spend.toFixed(2),
-          leads: m.leads,
-          costPerLead: costPerLead(m.spend, m.leads)
+          values: m.values
         };
       })
       .sort((a, b) => b.spend - a.spend);
 
-    return json(200, { isDemo: false, range, ads });
+    return json(200, { isDemo: false, range, metrics: selectedMetrics, ads });
   } catch (err) {
     return json(502, { error: 'Could not fetch your ads from Meta. ' + err.message });
   }

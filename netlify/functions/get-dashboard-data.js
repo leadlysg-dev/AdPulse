@@ -1,7 +1,9 @@
 // Pulls the logged-in customer's real numbers from their selected Meta ad
 // account for the requested date range: a daily breakdown for the charts,
 // period totals for the tiles, and the equivalent prior period so the
-// frontend can phrase "vs previous period" insights.
+// frontend can phrase "vs previous period" insights. Which conversion
+// metrics are reported is the customer's own selection (selectedMetrics),
+// defaulting to Leads for accounts that haven't picked yet.
 //
 // Google Ads OAuth is connected but live Google figures still need the
 // official client library wired in - they stay 0 and the frontend labels
@@ -9,7 +11,8 @@
 // hasn't connected an account yet, so the dashboard never looks broken.
 const { getEmailFromRequest, getUser } = require('./_store');
 const { VALID_RANGES, resolveRange, listDays } = require('./_dates');
-const { metaGet, readRow, sumRows, costPerLead } = require('./_meta');
+const { metaGet, readRow, sumRows, costPer } = require('./_meta');
+const { getSelectedMetrics } = require('./_metrics');
 const { demoDashboard } = require('./_demo');
 
 const json = (statusCode, body) => ({
@@ -33,11 +36,15 @@ exports.handler = async (event) => {
     return json(200, demoDashboard(range));
   }
 
+  const selectedMetrics = getSelectedMetrics(meta);
+  const metricIds = selectedMetrics.map((m) => m.id);
   const { since, until, prevSince, prevUntil } = resolveRange(range);
 
   try {
-    // One call with a daily breakdown covers both the chart and the period
+    // One call with a daily breakdown covers both the charts and the period
     // totals; a second call fetches the prior period's totals for comparisons.
+    // The actions field carries every conversion type at once, so the same
+    // two calls serve any metric selection.
     const [dailyRows, prevRows] = await Promise.all([
       metaGet(`${meta.selectedAdAccountId}/insights`, {
         fields: 'spend,actions',
@@ -53,18 +60,27 @@ exports.handler = async (event) => {
       })
     ]);
 
-    // The API only returns rows for days with activity - fill the gaps so the
-    // chart shows a continuous timeline.
+    // The API only returns rows for days with activity - fill the gaps so
+    // the charts show a continuous timeline.
     const byDate = {};
     dailyRows.forEach((row) => {
-      byDate[row.date_start] = readRow(row);
+      byDate[row.date_start] = readRow(row, metricIds);
     });
     const dates = listDays(since, until);
-    const dailyLeads = dates.map((d) => (byDate[d] ? byDate[d].leads : 0));
     const dailySpend = dates.map((d) => (byDate[d] ? +byDate[d].spend.toFixed(2) : 0));
 
-    const totals = sumRows(dailyRows);
-    const prev = sumRows(prevRows);
+    const totals = sumRows(dailyRows, metricIds);
+    const prev = sumRows(prevRows, metricIds);
+
+    const metrics = selectedMetrics.map((m) => ({
+      id: m.id,
+      label: m.label,
+      value: totals.values[m.id],
+      previous: prev.values[m.id],
+      costPer: costPer(totals.spend, totals.values[m.id]),
+      prevCostPer: costPer(prev.spend, prev.values[m.id]),
+      daily: dates.map((d) => (byDate[d] ? byDate[d].values[m.id] : 0))
+    }));
 
     return json(200, {
       isDemo: false,
@@ -73,17 +89,12 @@ exports.handler = async (event) => {
       until,
       prevSince,
       prevUntil,
-      leads: totals.leads,
       spend: +totals.spend.toFixed(2),
-      costPerLead: costPerLead(totals.spend, totals.leads),
       metaSpend: +totals.spend.toFixed(2),
       googleSpend: 0,
-      previous: {
-        leads: prev.leads,
-        spend: +prev.spend.toFixed(2),
-        costPerLead: costPerLead(prev.spend, prev.leads)
-      },
-      daily: { dates, leads: dailyLeads, spend: dailySpend }
+      previous: { spend: +prev.spend.toFixed(2) },
+      metrics,
+      daily: { dates, spend: dailySpend }
     });
   } catch (err) {
     return json(200, {

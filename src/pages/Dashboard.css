@@ -26,6 +26,29 @@
   font-weight: 600;
 }
 
+.dashboard-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.edit-metrics-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.edit-metrics-link:hover {
+  color: var(--text-primary);
+  background: var(--gridline);
+}
+
 .filter-row {
   display: flex;
   align-items: center;
@@ -57,9 +80,11 @@
   margin-top: -8px;
 }
 
+/* Tile count varies with the customer's tracked metrics (n metrics + spend),
+   so the grid packs however many there are. */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
 
@@ -70,16 +95,7 @@
 }
 
 @media (max-width: 720px) {
-  .stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .chart-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .stat-grid {
     grid-template-columns: 1fr;
   }
 }

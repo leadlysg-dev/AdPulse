@@ -1,0 +1,121 @@
+.select-metrics-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--page-plane);
+}
+
+.select-metrics-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 36px 32px;
+}
+
+.select-metrics-card h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.select-metrics-sub {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.select-metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.metric-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.metric-option:hover {
+  border-color: var(--baseline);
+}
+
+.metric-option.selected {
+  border-color: var(--series-1);
+  background: color-mix(in srgb, var(--series-1) 8%, var(--surface-1));
+}
+
+.metric-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.metric-check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--baseline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-1);
+  color: var(--surface-1);
+}
+
+.metric-option.selected .metric-check {
+  background: var(--series-1);
+  border-color: var(--series-1);
+  color: #fff;
+}
+
+.metric-option:has(input:focus-visible) {
+  outline: 2px solid var(--series-1);
+  outline-offset: 1px;
+}
+
+.metric-label {
+  font-size: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.metric-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.select-metrics-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.select-metrics-cancel {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.select-metrics-skeleton-row {
+  height: 46px;
+  border-radius: var(--radius-md);
+}
+
+.select-metrics-unavailable p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
