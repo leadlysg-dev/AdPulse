@@ -16,9 +16,14 @@
   padding: 8px 22px;
 }
 
+/* Many tracked metrics -> the row grid grows; scroll it inside the card
+   rather than letting the page scroll sideways. */
+.ads-scroll {
+  overflow-x: auto;
+}
+
 .ad-row {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 90px 70px 90px;
   gap: 14px;
   align-items: center;
   padding: 14px 0;
@@ -111,8 +116,10 @@
 }
 
 @media (max-width: 640px) {
+  /* !important because the desktop column layout is set as an inline style
+     (the column count depends on the customer's tracked metrics). */
   .ad-row {
-    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr) !important;
     grid-template-areas:
       'thumb copy'
       'thumb metrics';

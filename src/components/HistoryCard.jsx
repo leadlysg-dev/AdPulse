@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import WeeklyBars from './WeeklyBars';
 import ErrorState from './ErrorState';
-import { fmtDate, money, number } from '../lib/format';
+import { fmtDate, money, number, metricColor } from '../lib/format';
 import './HistoryCard.css';
 
 export default function HistoryCard({ history, error, onRetry }) {
@@ -25,7 +25,7 @@ export default function HistoryCard({ history, error, onRetry }) {
     );
   }
 
-  const weeks = history.weeks;
+  const { weeks, metrics } = history;
 
   return (
     <section className="history-section">
@@ -43,38 +43,45 @@ export default function HistoryCard({ history, error, onRetry }) {
 
       <div className="card history-card">
         {showTable ? (
-          <table className="history-table">
-            <caption className="visually-hidden">Weekly leads, spend and cost per lead for the last 12 weeks</caption>
-            <thead>
-              <tr>
-                <th scope="col">Week</th>
-                <th scope="col">Leads</th>
-                <th scope="col">Spend</th>
-                <th scope="col">Cost per lead</th>
-              </tr>
-            </thead>
-            <tbody>
-              {weeks.map((w) => (
-                <tr key={w.start}>
-                  <th scope="row">
-                    {fmtDate(w.start)} – {fmtDate(w.end)}
-                  </th>
-                  <td>{number(w.leads)}</td>
-                  <td>{money(w.spend)}</td>
-                  <td>{w.leads ? money(w.costPerLead) : '—'}</td>
+          <div className="history-table-scroll">
+            <table className="history-table">
+              <caption className="visually-hidden">Weekly results and spend for the last 12 weeks</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Week</th>
+                  {metrics.map((m) => (
+                    <th scope="col" key={m.id}>{m.label}</th>
+                  ))}
+                  <th scope="col">Spend</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {weeks.map((w) => (
+                  <tr key={w.start}>
+                    <th scope="row">
+                      {fmtDate(w.start)} – {fmtDate(w.end)}
+                    </th>
+                    {metrics.map((m) => (
+                      <td key={m.id}>{number(w.values[m.id] || 0)}</td>
+                    ))}
+                    <td>{money(w.spend)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="history-charts">
-            <WeeklyBars
-              title="Leads by week"
-              weeks={weeks}
-              getValue={(w) => w.leads}
-              color="var(--series-1)"
-              formatValue={number}
-            />
+            {metrics.map((m, i) => (
+              <WeeklyBars
+                key={m.id}
+                title={`${m.label} by week`}
+                weeks={weeks}
+                getValue={(w) => w.values[m.id] || 0}
+                color={metricColor(i)}
+                formatValue={number}
+              />
+            ))}
             <WeeklyBars
               title="Spend by week"
               weeks={weeks}

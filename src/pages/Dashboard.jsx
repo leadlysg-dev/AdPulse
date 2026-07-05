@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { fmtDate, money, number, pctChange } from '../lib/format';
+import { fmtDate, money, number, pctChange, metricColor } from '../lib/format';
 import TopNav from '../components/TopNav';
 import ConnectRow from '../components/ConnectRow';
 import DateRangePicker from '../components/DateRangePicker';
@@ -60,6 +61,11 @@ export default function Dashboard() {
         window.location.href = '/select-account.html?provider=google';
         return;
       }
+      if (s.metaNeedsMetrics) {
+        setRedirecting(true);
+        window.location.href = '/select-metrics.html?provider=meta';
+        return;
+      }
       setStatus(s);
     } catch (err) {
       setStatusError(err.message);
@@ -111,7 +117,8 @@ export default function Dashboard() {
   }
 
   const initialLoading = data === null && !dataError;
-  const noActivity = data && !data.isDemo && data.leads === 0 && data.spend === 0;
+  const noActivity =
+    data && !data.isDemo && data.spend === 0 && (data.metrics || []).every((m) => m.value === 0);
 
   const chartLabels = data?.daily ? data.daily.dates.map(fmtDate) : [];
 
@@ -122,7 +129,24 @@ export default function Dashboard() {
       <main className="dashboard-main">
         <div className="dashboard-head">
           <h1>Your ad performance</h1>
-          {status && <ConnectRow metaConnected={status.metaConnected} googleConnected={status.googleConnected} />}
+          <div className="dashboard-head-actions">
+            {status?.metaConnected && (
+              <Link className="edit-metrics-link" to="/select-metrics.html?provider=meta">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                  <path
+                    d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.58 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.86a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9c.34.62.98 1.02 1.69 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51.97Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Tracked metrics
+              </Link>
+            )}
+            {status && <ConnectRow metaConnected={status.metaConnected} googleConnected={status.googleConnected} />}
+          </div>
         </div>
 
         {justConnected && (
@@ -163,31 +187,33 @@ export default function Dashboard() {
                 <Insights data={data} />
 
                 <div className="stat-grid">
-                  <StatTile
-                    label={`Leads (${rangeLabel(range)})`}
-                    value={number(data.leads)}
-                    delta={{ pct: pctChange(data.leads, data.previous?.leads), goodWhenUp: true }}
-                  />
+                  {data.metrics.map((m) => (
+                    <StatTile
+                      key={m.id}
+                      label={m.label}
+                      value={number(m.value)}
+                      delta={{ pct: pctChange(m.value, m.previous), goodWhenUp: true }}
+                      hint={m.costPer > 0 ? `${money(m.costPer)} per result` : undefined}
+                    />
+                  ))}
                   <StatTile
                     label="Ad spend"
                     value={money(data.spend)}
                     delta={{ pct: pctChange(data.spend, data.previous?.spend), goodWhenUp: null }}
                   />
-                  <StatTile
-                    label="Cost per lead"
-                    value={money(data.costPerLead)}
-                    delta={{ pct: pctChange(data.costPerLead, data.previous?.costPerLead), goodWhenUp: false }}
-                  />
                 </div>
 
                 <div className="chart-grid">
-                  <TrendChart
-                    title="Leads over time"
-                    labels={chartLabels}
-                    values={data.daily.leads}
-                    color="var(--series-1)"
-                    formatValue={number}
-                  />
+                  {data.metrics.map((m, i) => (
+                    <TrendChart
+                      key={m.id}
+                      title={`${m.label} over time`}
+                      labels={chartLabels}
+                      values={m.daily}
+                      color={metricColor(i)}
+                      formatValue={number}
+                    />
+                  ))}
                   <TrendChart
                     title="Spend over time"
                     labels={chartLabels}
@@ -220,6 +246,7 @@ export default function Dashboard() {
         <div className={refreshing ? 'is-refreshing' : undefined}>
           <AdsSection
             ads={adsError ? null : ads?.ads}
+            metrics={ads?.metrics}
             error={adsError}
             onRetry={() => loadRangeScoped(range)}
             googleConnected={!!status?.googleConnected}
@@ -228,17 +255,4 @@ export default function Dashboard() {
       </main>
     </div>
   );
-}
-
-function rangeLabel(range) {
-  switch (range) {
-    case 'last_7d':
-      return 'last 7 days';
-    case 'this_month':
-      return 'this month';
-    case 'last_month':
-      return 'last month';
-    default:
-      return 'last 30 days';
-  }
 }

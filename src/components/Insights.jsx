@@ -3,6 +3,7 @@ import './Insights.css';
 
 // A change smaller than this reads as noise, not news.
 const MIN_CHANGE = 5;
+const MAX_CALLOUTS = 4;
 
 function Arrow({ direction, tone }) {
   return (
@@ -28,67 +29,94 @@ function Flat({ tone }) {
   );
 }
 
-// Turns current vs previous totals into at most four plain-English callouts.
-// Comparisons against a near-zero base are suppressed rather than shown as
-// "+800%".
+// Turns current vs previous totals into a few plain-English callouts, one
+// pass over every tracked metric. Ranked by size of change so the biggest
+// stories survive the cap. Comparisons against a near-zero base are
+// suppressed rather than shown as "+800%".
 export function buildInsights(data) {
-  const prev = data.previous;
-  if (!prev) return [];
-
+  const metrics = data.metrics || [];
+  const spendPct = pctChange(data.spend, data.previous?.spend);
   const out = [];
-  const leadsPct = pctChange(data.leads, prev.leads);
-  const spendPct = pctChange(data.spend, prev.spend);
-  const cplPct = pctChange(data.costPerLead, prev.costPerLead);
 
-  if (cplPct !== null && data.costPerLead > 0 && Math.abs(cplPct) >= MIN_CHANGE) {
-    const down = cplPct < 0;
-    out.push({
-      key: 'cpl',
-      direction: down ? 'down' : 'up',
-      tone: down ? 'good' : 'bad',
-      text: `Cost per lead ${down ? 'down' : 'up'} ${Math.abs(cplPct).toFixed(0)}% vs the prior period (${money(prev.costPerLead)} → ${money(data.costPerLead)}).`
-    });
-  }
-
-  if (leadsPct !== null && Math.abs(leadsPct) >= MIN_CHANGE) {
-    const up = leadsPct > 0;
-    out.push({
-      key: 'leads',
-      direction: up ? 'up' : 'down',
-      tone: up ? 'good' : 'bad',
-      text: `Leads ${up ? 'up' : 'down'} ${Math.abs(leadsPct).toFixed(0)}% (${number(prev.leads)} → ${number(data.leads)}).`
-    });
-  }
-
-  if (spendPct !== null && Math.abs(spendPct) >= MIN_CHANGE) {
-    const up = spendPct > 0;
-    out.push({
-      key: 'spend',
-      direction: up ? 'up' : 'down',
-      tone: 'neutral',
-      text: `Ad spend ${up ? 'up' : 'down'} ${Math.abs(spendPct).toFixed(0)}% (${money(prev.spend)} → ${money(data.spend)}).`
-    });
-  }
-
-  if (spendPct !== null && leadsPct !== null) {
-    if (spendPct >= 10 && Math.abs(leadsPct) < MIN_CHANGE) {
+  metrics.forEach((m) => {
+    const cplPct = pctChange(m.costPer, m.prevCostPer);
+    if (cplPct !== null && m.costPer > 0 && Math.abs(cplPct) >= MIN_CHANGE) {
+      const down = cplPct < 0;
       out.push({
-        key: 'divergence',
-        direction: 'flat',
-        tone: 'bad',
-        text: 'Spend increased but leads stayed flat — worth reviewing which ads are getting the extra budget.'
-      });
-    } else if (leadsPct >= 10 && Math.abs(spendPct) < MIN_CHANGE) {
-      out.push({
-        key: 'divergence',
-        direction: 'flat',
-        tone: 'good',
-        text: 'Leads grew without extra spend — your ads got more efficient this period.'
+        key: `cpl-${m.id}`,
+        group: m.id,
+        rank: Math.abs(cplPct),
+        direction: down ? 'down' : 'up',
+        tone: down ? 'good' : 'bad',
+        text: `${m.label} — cost per result ${down ? 'down' : 'up'} ${Math.abs(cplPct).toFixed(0)}% vs the prior period (${money(m.prevCostPer)} → ${money(m.costPer)}).`
       });
     }
+
+    const valuePct = pctChange(m.value, m.previous);
+    if (valuePct !== null && Math.abs(valuePct) >= MIN_CHANGE) {
+      const up = valuePct > 0;
+      out.push({
+        key: `val-${m.id}`,
+        group: m.id,
+        rank: Math.abs(valuePct),
+        direction: up ? 'up' : 'down',
+        tone: up ? 'good' : 'bad',
+        text: `${m.label} ${up ? 'up' : 'down'} ${Math.abs(valuePct).toFixed(0)}% (${number(m.previous)} → ${number(m.value)}).`
+      });
+    }
+
+    // Spend/results divergence - the "money moved but results didn't" story.
+    if (spendPct !== null && valuePct !== null) {
+      if (spendPct >= 10 && Math.abs(valuePct) < MIN_CHANGE) {
+        out.push({
+          key: `div-${m.id}`,
+          group: m.id,
+          rank: Math.abs(spendPct) + 10,
+          direction: 'flat',
+          tone: 'bad',
+          text: `Spend increased but ${m.label.toLowerCase()} stayed flat — worth reviewing which ads are getting the extra budget.`
+        });
+      } else if (valuePct >= 10 && Math.abs(spendPct) < MIN_CHANGE) {
+        out.push({
+          key: `div-${m.id}`,
+          group: m.id,
+          rank: Math.abs(valuePct) + 10,
+          direction: 'flat',
+          tone: 'good',
+          text: `${m.label} grew without extra spend — your ads got more efficient this period.`
+        });
+      }
+    }
+  });
+
+  if (spendPct !== null && Math.abs(spendPct) >= MIN_CHANGE) {
+    out.push({
+      key: 'spend',
+      group: 'spend',
+      rank: Math.abs(spendPct),
+      direction: spendPct > 0 ? 'up' : 'down',
+      tone: 'neutral',
+      text: `Ad spend ${spendPct > 0 ? 'up' : 'down'} ${Math.abs(spendPct).toFixed(0)}% (${money(data.previous.spend)} → ${money(data.spend)}).`
+    });
   }
 
-  return out.slice(0, 4);
+  // One callout per metric before any metric gets a second, so a single
+  // volatile metric can't crowd out the rest of the story.
+  const ranked = out.sort((a, b) => b.rank - a.rank);
+  const picked = [];
+  const seenGroups = new Set();
+  ranked.forEach((ins) => {
+    if (picked.length < MAX_CALLOUTS && !seenGroups.has(ins.group)) {
+      seenGroups.add(ins.group);
+      picked.push(ins);
+    }
+  });
+  ranked.forEach((ins) => {
+    if (picked.length < MAX_CALLOUTS && !picked.includes(ins)) {
+      picked.push(ins);
+    }
+  });
+  return picked;
 }
 
 export default function Insights({ data }) {

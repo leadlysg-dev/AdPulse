@@ -58,6 +58,15 @@ export const api = {
       body: JSON.stringify({ provider, accountId })
     }),
 
+  listMetrics: (provider) =>
+    request(`/.netlify/functions/list-metrics?provider=${encodeURIComponent(provider)}`),
+
+  selectMetrics: (provider, metrics) =>
+    request('/.netlify/functions/select-metrics', {
+      method: 'POST',
+      body: JSON.stringify({ provider, metrics })
+    }),
+
   login: (email, password) =>
     request('/.netlify/functions/login', {
       method: 'POST',

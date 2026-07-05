@@ -17,7 +17,13 @@ function Thumb({ url, name }) {
   );
 }
 
-export default function AdsSection({ ads, error, onRetry, googleConnected }) {
+export default function AdsSection({ ads, metrics, error, onRetry, googleConnected }) {
+  const metricList = metrics || [];
+  // Thumbnail + ad copy + spend + one column per tracked metric.
+  const rowStyle = {
+    gridTemplateColumns: `48px minmax(0, 1fr) 90px repeat(${metricList.length}, minmax(64px, 84px))`
+  };
+
   return (
     <section className="ads-section">
       <div className="ads-head">
@@ -30,7 +36,7 @@ export default function AdsSection({ ads, error, onRetry, googleConnected }) {
       {!error && !ads && (
         <div className="card ads-card">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="ad-row">
+            <div key={i} className="ad-row" style={{ gridTemplateColumns: '48px minmax(0, 1fr)' }}>
               <div className="skeleton ad-thumb" />
               <div className="ad-row-copy">
                 <div className="skeleton ad-skeleton-line" style={{ width: '40%' }} />
@@ -50,31 +56,37 @@ export default function AdsSection({ ads, error, onRetry, googleConnected }) {
 
       {!error && ads && ads.length > 0 && (
         <div className="card ads-card">
-          <div className="ad-row ad-row-header" aria-hidden="true">
-            <span />
-            <span className="ad-col-label">Ad</span>
-            <span className="ad-metric-label">Spend</span>
-            <span className="ad-metric-label">Leads</span>
-            <span className="ad-metric-label">Cost / lead</span>
-          </div>
-          {ads.map((ad) => (
-            <div key={ad.id} className="ad-row">
-              <Thumb url={ad.thumbnailUrl} name={ad.name} />
-              <div className="ad-row-copy">
-                <p className="ad-name">{ad.name}</p>
-                {(ad.headline || ad.body) && (
-                  <p className="ad-copy">
-                    {ad.headline && <strong>{ad.headline}</strong>}
-                    {ad.headline && ad.body && ' — '}
-                    {ad.body}
-                  </p>
-                )}
-              </div>
-              <span className="ad-metric" data-label="Spend">{money(ad.spend)}</span>
-              <span className="ad-metric" data-label="Leads">{number(ad.leads)}</span>
-              <span className="ad-metric" data-label="Cost / lead">{ad.leads ? money(ad.costPerLead) : '—'}</span>
+          <div className="ads-scroll">
+            <div className="ad-row ad-row-header" style={rowStyle} aria-hidden="true">
+              <span />
+              <span className="ad-col-label">Ad</span>
+              <span className="ad-metric-label">Spend</span>
+              {metricList.map((m) => (
+                <span key={m.id} className="ad-metric-label">{m.label}</span>
+              ))}
             </div>
-          ))}
+            {ads.map((ad) => (
+              <div key={ad.id} className="ad-row" style={rowStyle}>
+                <Thumb url={ad.thumbnailUrl} name={ad.name} />
+                <div className="ad-row-copy">
+                  <p className="ad-name">{ad.name}</p>
+                  {(ad.headline || ad.body) && (
+                    <p className="ad-copy">
+                      {ad.headline && <strong>{ad.headline}</strong>}
+                      {ad.headline && ad.body && ' — '}
+                      {ad.body}
+                    </p>
+                  )}
+                </div>
+                <span className="ad-metric" data-label="Spend">{money(ad.spend)}</span>
+                {metricList.map((m) => (
+                  <span key={m.id} className="ad-metric" data-label={m.label}>
+                    {number(ad.values?.[m.id] || 0)}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>

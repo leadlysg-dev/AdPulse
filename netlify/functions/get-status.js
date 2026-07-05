@@ -22,6 +22,12 @@ exports.handler = async (event) => {
       email: user.email,
       metaConnected: !!meta,
       metaNeedsPick: !!meta && meta.adAccounts.length > 1 && !meta.selectedAdAccountId,
+      // Sent to the metric picker once, right after the account is chosen.
+      // Accounts predating the picker aren't flagged here per se - they
+      // also have no selectedMetrics, which is exactly the nudge we want,
+      // and until they save one they default to Leads everywhere.
+      metaNeedsMetrics:
+        !!meta && !!meta.selectedAdAccountId && !(meta.selectedMetrics && meta.selectedMetrics.length),
       googleConnected: !!google,
       googleNeedsPick: !!google && google.adAccounts.length > 1 && !google.selectedAdAccountId
     })

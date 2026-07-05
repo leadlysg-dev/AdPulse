@@ -32,6 +32,10 @@
   margin-top: 12px;
 }
 
+.history-table-scroll {
+  overflow-x: auto;
+}
+
 .history-table {
   width: 100%;
   border-collapse: collapse;
