@@ -168,11 +168,26 @@ export default function TrendChart({ title, labels, values, color, formatValue =
               </text>
             )}
 
-            {points.map((p) => (
-              <text key={p.label} x={p.x} y={HEIGHT - 8} textAnchor="middle" className="axis-label">
-                {p.label}
-              </text>
-            ))}
+            {points.map((p, i) => {
+              // With daily data there are too many points to label them all -
+              // show roughly six, evenly spaced, and skip any that would
+              // crowd the final label.
+              const step = Math.ceil(points.length / 6);
+              const isLast = i === points.length - 1;
+              const onStep = i % step === 0 && points.length - 1 - i >= step / 2;
+              if (!onStep && !isLast) return null;
+              return (
+                <text
+                  key={p.label}
+                  x={p.x}
+                  y={HEIGHT - 8}
+                  textAnchor={isLast ? 'end' : 'middle'}
+                  className="axis-label"
+                >
+                  {p.label}
+                </text>
+              );
+            })}
           </svg>
 
           {hovered && (

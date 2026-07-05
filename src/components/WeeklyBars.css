@@ -1,0 +1,55 @@
+.weekly-bars h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+}
+
+.weekly-bars-plot {
+  position: relative;
+}
+
+.weekly-bars-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.weekly-gridline {
+  stroke: var(--gridline);
+  stroke-width: 1;
+}
+
+.weekly-axis-label {
+  fill: var(--text-muted);
+  font-size: 10px;
+}
+
+.weekly-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.weekly-tooltip-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.weekly-tooltip-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}

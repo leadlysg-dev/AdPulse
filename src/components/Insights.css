@@ -1,0 +1,61 @@
+.insights {
+  padding: 20px 22px;
+}
+
+.insights-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.insights-head h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.insights-period {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.insights-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insights-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.insight-arrow {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.insight-arrow-good {
+  color: var(--good-text);
+}
+
+.insight-arrow-bad {
+  color: var(--status-critical);
+}
+
+.insight-arrow-neutral {
+  color: var(--text-muted);
+}
+
+.insights-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+}

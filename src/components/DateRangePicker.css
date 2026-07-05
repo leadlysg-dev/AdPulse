@@ -1,0 +1,30 @@
+.range-picker {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-1);
+  flex-wrap: wrap;
+}
+
+.range-picker-option {
+  border: none;
+  background: none;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.range-picker-option:hover {
+  color: var(--text-primary);
+}
+
+.range-picker-option.selected {
+  background: var(--text-primary);
+  color: var(--surface-1);
+  font-weight: 500;
+}

@@ -1,0 +1,59 @@
+.history-section h2,
+.ads-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.history-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.history-card {
+  padding: 20px 22px;
+}
+
+.history-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 720px) {
+  .history-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.history-skeleton {
+  height: 240px;
+  margin-top: 12px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.history-table th,
+.history-table td {
+  text-align: right;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--gridline);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-table th[scope='row'],
+.history-table thead th:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.history-table thead th {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 12px;
+}

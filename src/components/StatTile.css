@@ -21,3 +21,20 @@
   font-size: 12px;
   color: var(--text-muted);
 }
+
+.stat-tile-delta {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.stat-tile-delta-good {
+  color: var(--good-text);
+}
+
+.stat-tile-delta-bad {
+  color: var(--status-critical);
+}
+
+.stat-tile-delta-neutral {
+  color: var(--text-muted);
+}

@@ -43,7 +43,12 @@ async function request(path, options = {}) {
 export const api = {
   getStatus: () => request('/.netlify/functions/get-status'),
 
-  getDashboardData: () => request('/.netlify/functions/get-dashboard-data'),
+  getDashboardData: (range) =>
+    request(`/.netlify/functions/get-dashboard-data?range=${encodeURIComponent(range)}`),
+
+  getHistory: () => request('/.netlify/functions/get-history'),
+
+  getAds: (range) => request(`/.netlify/functions/get-ads?range=${encodeURIComponent(range)}`),
 
   listAccounts: () => request('/.netlify/functions/list-accounts'),
 
