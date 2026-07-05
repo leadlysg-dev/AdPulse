@@ -7,6 +7,11 @@ const jwt = require('jsonwebtoken');
 const { getStore } = require('@netlify/blobs');
 
 function usersStore() {
+  const siteID = process.env.NETLIFY_SITE_ID;
+  const token = process.env.NETLIFY_BLOBS_TOKEN;
+  if (siteID && token) {
+    return getStore({ name: 'adpulse-users', siteID, token });
+  }
   return getStore('adpulse-users');
 }
 
