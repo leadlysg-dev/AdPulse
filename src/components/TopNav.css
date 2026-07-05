@@ -1,0 +1,43 @@
+.top-nav {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.top-nav-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.top-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.top-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.top-nav-email {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.top-nav-logout {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.top-nav-logout:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
