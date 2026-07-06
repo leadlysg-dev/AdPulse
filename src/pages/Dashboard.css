@@ -9,7 +9,7 @@
   padding: 24px 24px 64px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .dashboard-head {
@@ -21,8 +21,9 @@
 }
 
 .dashboard-head h1 {
-  font-size: 20px;
+  font-size: var(--text-page-title);
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .dashboard-subhead {
@@ -30,7 +31,7 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: -6px;
+  margin-top: -16px; /* 8px below the title row within the 24px page gap */
 }
 
 .dashboard-subhead .filter-period {

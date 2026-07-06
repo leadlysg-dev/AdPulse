@@ -1,11 +1,11 @@
 .split-bar {
-  padding: 20px 22px;
+  padding: 20px;
 }
 
 .split-bar h3 {
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .split-bar-track {
@@ -24,7 +24,7 @@
 .split-bar-legend {
   list-style: none;
   padding: 0;
-  margin: 14px 0 0;
+  margin: 12px 0 0;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;

@@ -1,5 +1,5 @@
 .trend-chart {
-  padding: 20px 20px 12px;
+  padding: 20px 20px 16px;
 }
 
 .trend-chart-head {
@@ -19,14 +19,16 @@
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: 12px;
-  text-decoration: underline;
+  font-size: var(--text-caption);
   cursor: pointer;
-  padding: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  transition: color var(--motion-fast), background-color var(--motion-fast);
 }
 
 .table-toggle:hover {
   color: var(--text-primary);
+  background: var(--gridline);
 }
 
 .trend-chart-plot {
@@ -69,7 +71,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
-  padding: 6px 10px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -97,7 +99,7 @@
 .trend-table th,
 .trend-table td {
   text-align: left;
-  padding: 8px 4px;
+  padding: 8px;
   border-bottom: 1px solid var(--gridline);
   font-variant-numeric: tabular-nums;
 }
