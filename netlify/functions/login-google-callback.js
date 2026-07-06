@@ -4,6 +4,13 @@
 // issue the exact same session cookie the password login issues, so every
 // other function works unchanged. Google's sign-in tokens are used once to
 // learn the email and never stored.
+//
+// Every failure branch logs its stage and the underlying reason to the
+// function log (console.error -> Netlify's function logs) and redirects
+// back to the login page with a stage-specific error code, so a broken
+// flow can be diagnosed from either side. Secrets, codes, and tokens are
+// never logged - only statuses, error names, and the redirect URI (which
+// is public).
 const crypto = require('crypto');
 const fetch = require('node-fetch');
 const jwt = require('jsonwebtoken');
@@ -25,20 +32,29 @@ exports.handler = async (event) => {
 
   if (qs.error) {
     // e.g. the customer clicked "Cancel" on Google's consent screen
+    console.error(`[login-google-callback] Google returned error=${qs.error}`);
     return backToLogin('google-cancelled');
   }
-  if (!qs.code || !qs.state) return backToLogin('google-failed');
+  if (!qs.code || !qs.state) {
+    console.error(
+      `[login-google-callback] missing params: code=${qs.code ? 'present' : 'MISSING'}, state=${qs.state ? 'present' : 'MISSING'}`
+    );
+    return backToLogin('google-failed');
+  }
 
   let next = null;
   try {
     const state = jwt.verify(qs.state, process.env.SESSION_SECRET);
     if (state.purpose !== 'google-login') throw new Error('wrong purpose');
     next = state.next || null;
-  } catch {
-    return backToLogin('google-failed'); // forged, expired, or reused state
+  } catch (err) {
+    // forged, expired, or reused state - or a SESSION_SECRET mismatch
+    console.error(`[login-google-callback] state verification failed: ${err.name}: ${err.message}`);
+    return backToLogin('google-state-invalid');
   }
 
   try {
+    const redirectUri = loginRedirectUri(event.headers);
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -46,12 +62,21 @@ exports.handler = async (event) => {
         code: qs.code,
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: loginRedirectUri(event.headers),
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code'
       })
     });
     const tokenData = await tokenRes.json();
-    if (!tokenData.id_token) return backToLogin('google-failed');
+    if (!tokenData.id_token) {
+      // Google rejected the exchange - its error/error_description say why
+      // (invalid_client = client id/secret pair wrong, invalid_grant = code
+      // expired/reused, redirect_uri_mismatch = URI differs from the
+      // authorize request or isn't registered).
+      console.error(
+        `[login-google-callback] token exchange failed: http=${tokenRes.status}, error=${tokenData.error || 'none'}, description=${tokenData.error_description || 'none'}, redirect_uri=${redirectUri}, client_id_set=${!!process.env.GOOGLE_CLIENT_ID}, client_secret_set=${!!process.env.GOOGLE_CLIENT_SECRET}`
+      );
+      return backToLogin('google-exchange-failed');
+    }
 
     // The id_token arrived directly from Google's token endpoint over TLS
     // (not from the browser), so decoding without signature verification is
@@ -61,7 +86,12 @@ exports.handler = async (event) => {
     const emailVerified = identity.email_verified === true || identity.email_verified === 'true';
 
     // Matching accounts by email is only safe when Google vouches for it.
-    if (!email || !emailVerified) return backToLogin('google-unverified');
+    if (!email || !emailVerified) {
+      console.error(
+        `[login-google-callback] identity rejected: email_present=${!!email}, email_verified=${identity.email_verified}`
+      );
+      return backToLogin('google-unverified');
+    }
 
     let user = await getUser(email);
     if (!user) {
@@ -86,7 +116,10 @@ exports.handler = async (event) => {
       headers: { Location: destination, 'Set-Cookie': createSessionCookie(user.email) },
       body: ''
     };
-  } catch {
-    return backToLogin('google-failed');
+  } catch (err) {
+    // Our side threw after Google succeeded or during the exchange call
+    // itself (network, storage, dependency) - the stack pinpoints it.
+    console.error(`[login-google-callback] server error: ${err.stack || err.message}`);
+    return backToLogin('google-server-error');
   }
 };

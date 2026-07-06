@@ -3,10 +3,16 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import './Login.css';
 
-// Failure codes the Google sign-in callback can send us back with.
+// Failure codes the Google sign-in callback can send us back with. Each
+// maps to a distinct stage of the flow so failures are diagnosable.
 const GOOGLE_ERRORS = {
   'google-cancelled': 'Google sign-in was cancelled.',
   'google-unverified': "Google couldn't verify that email address, so we can't sign you in with it.",
+  'google-state-invalid': 'That sign-in attempt expired — please try again.',
+  'google-exchange-failed':
+    "Google didn't accept the sign-in. Please try again in a moment, or use your email and password.",
+  'google-server-error':
+    'Something went wrong on our side finishing the Google sign-in. Please try again, or use your email and password.',
   'google-failed': "Something went wrong signing in with Google. Please try again, or use your email and password."
 };
 
