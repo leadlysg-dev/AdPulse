@@ -39,15 +39,23 @@ function periodKey(cadence) {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
-function prefsHash(cadence, focus) {
-  return crypto.createHash('sha256').update(`${cadence}|${focus}`).digest('hex').slice(0, 16);
+// The data window is part of the hash so a change to what the summary
+// covers invalidates any cached summary immediately.
+function prefsHash(cadence, focus, range) {
+  return crypto.createHash('sha256').update(`${cadence}|${focus}|${range}`).digest('hex').slice(0, 16);
 }
+
+// Both cadences summarize the trailing 7 days compared to the 7 days
+// before - a weekly report covers a week, and the daily one is a daily
+// pulse over the same window. Cadence controls how often the summary
+// regenerates (per day vs per ISO week), not how much data it covers.
+const SUMMARY_RANGE = 'last_7d';
 
 // Condense the period into the small object Claude actually needs.
 async function buildSummary(meta, cadence) {
   const selectedMetrics = getSelectedMetrics(meta);
   const metricIds = selectedMetrics.map((m) => m.id);
-  const range = cadence === 'daily' ? 'last_7d' : 'last_30d';
+  const range = SUMMARY_RANGE;
   const { since, until, prevSince, prevUntil } = resolveRange(range);
 
   const [rows, prevRows, adRows] = await Promise.all([
@@ -171,7 +179,7 @@ exports.handler = async (event) => {
   }
 
   const key = periodKey(cadence);
-  const hash = prefsHash(cadence, focus);
+  const hash = prefsHash(cadence, focus, SUMMARY_RANGE);
   const cached =
     user.aiInsight && user.aiInsight.periodKey === key && user.aiInsight.prefsHash === hash
       ? user.aiInsight
