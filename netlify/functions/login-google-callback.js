@@ -66,9 +66,12 @@ exports.handler = async (event) => {
     let user = await getUser(email);
     if (!user) {
       // A normal user row with an unguessable placeholder password - they
-      // sign in with Google; email/password correctly rejects until a
-      // password-reset feature lets them set one.
-      user = await createUser(email, crypto.randomBytes(32).toString('hex'));
+      // sign in with Google; email/password correctly rejects until they
+      // set a real one from Settings (passwordSet: false is what makes
+      // Settings offer "Set password" instead of "Change password").
+      user = await createUser(email, crypto.randomBytes(32).toString('hex'), {
+        passwordSet: false
+      });
     }
 
     const destination =

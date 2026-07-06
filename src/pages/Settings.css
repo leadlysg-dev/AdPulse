@@ -1,0 +1,308 @@
+/* Same 4px spacing scale and page shell as the Reports page: 24 between
+   major blocks, 20 card insets, 12/8/4 inside groups. */
+.settings-page {
+  min-height: 100vh;
+  background: var(--page-plane);
+}
+
+.settings-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-head h1 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-section h2 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.settings-section-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: -8px; /* 4px below the heading it captions */
+}
+
+.settings-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-divider {
+  border-top: 1px solid var(--border);
+}
+
+/* Label/value rows with an action or toggle on the right */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-row-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-row-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.settings-row-value {
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Password form */
+.password-form {
+  display: flex;
+  flex-direction: column;
+  max-width: 400px;
+}
+
+.password-form h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.password-form .settings-hint {
+  margin-top: 4px;
+}
+
+.password-form label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 12px 0 4px;
+}
+
+.password-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.password-form input:focus {
+  outline: 2px solid var(--series-1);
+  outline-offset: 1px;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.settings-saved {
+  font-size: 13px;
+  color: var(--good-text);
+}
+
+.settings-error {
+  color: var(--status-critical);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* Connections */
+.connection-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.connection-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.connection-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.connection-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--baseline);
+}
+
+.connection-status.is-connected {
+  color: var(--good-text);
+}
+
+.connection-status.is-connected .connection-dot {
+  background: var(--status-good);
+}
+
+.connection-confirm {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.connection-confirm p {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.connection-confirm-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* AI preferences */
+.ai-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: opacity 0.15s ease;
+}
+
+.ai-group.is-disabled {
+  opacity: 0.5;
+}
+
+.ai-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.ai-field textarea {
+  align-self: stretch;
+}
+
+.ai-field label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ai-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  resize: vertical;
+}
+
+.ai-field textarea:focus {
+  outline: 2px solid var(--series-1);
+  outline-offset: 1px;
+}
+
+.ai-field textarea:disabled,
+.range-picker-option:disabled {
+  cursor: not-allowed;
+}
+
+/* Toggle switch */
+.toggle {
+  flex: none;
+  width: 40px;
+  height: 24px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--gridline);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 1px;
+}
+
+.toggle-knob {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease;
+}
+
+.toggle-on {
+  background: var(--series-1);
+  border-color: var(--series-1);
+}
+
+.toggle-on .toggle-knob {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+@media (max-width: 480px) {
+  .settings-main {
+    padding: 16px 16px 48px;
+  }
+
+  .settings-row,
+  .connection-main {
+    flex-wrap: wrap;
+  }
+}

@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@netlify/blobs": "^7.3.0",
     "@supabase/supabase-js": "^2.110.0",
     "jsonwebtoken": "^9.0.2",

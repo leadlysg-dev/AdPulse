@@ -1,4 +1,4 @@
-const { getEmailFromRequest, getUser } = require('./_store');
+const { getEmailFromRequest, getUser, hasSetPassword } = require('./_store');
 
 exports.handler = async (event) => {
   const email = getEmailFromRequest(event.headers);
@@ -29,7 +29,11 @@ exports.handler = async (event) => {
       metaNeedsMetrics:
         !!meta && !!meta.selectedAdAccountId && !(meta.selectedMetrics && meta.selectedMetrics.length),
       googleConnected: !!google,
-      googleNeedsPick: !!google && google.adAccounts.length > 1 && !google.selectedAdAccountId
+      googleNeedsPick: !!google && google.adAccounts.length > 1 && !google.selectedAdAccountId,
+      // For the Settings page: "Change password" vs "Set password", and the
+      // saved AI preferences (null until first saved).
+      hasPassword: hasSetPassword(user),
+      aiPrefs: user.aiPrefs || null
     })
   };
 };

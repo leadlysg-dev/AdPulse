@@ -65,7 +65,7 @@ function assembleProvider(row) {
 async function getUser(email) {
   const { data: u, error } = await db()
     .from('users')
-    .select('id, email, password_hash, created_at')
+    .select('id, email, password_hash, password_set_at, created_at, ai_prefs, ai_insight')
     .eq('email', email.toLowerCase())
     .maybeSingle();
   if (error) fail(error, 'loading user');
@@ -85,7 +85,10 @@ async function getUser(email) {
     id: u.id,
     email: u.email,
     passwordHash: u.password_hash,
+    passwordSetAt: u.password_set_at,
     createdAt: u.created_at,
+    aiPrefs: u.ai_prefs,
+    aiInsight: u.ai_insight,
     accounts: {}
   };
   (accounts || []).forEach((row) => {
@@ -94,11 +97,17 @@ async function getUser(email) {
   return user;
 }
 
-async function createUser(email, password) {
+// opts.passwordSet=false marks the password as a placeholder (accounts
+// auto-created by Google sign-in), so Settings offers "Set password".
+async function createUser(email, password, opts = {}) {
   const { data, error } = await db()
     .from('users')
-    .insert({ email: email.toLowerCase(), password_hash: hashPassword(password) })
-    .select('id, email, password_hash, created_at')
+    .insert({
+      email: email.toLowerCase(),
+      password_hash: hashPassword(password),
+      password_set_at: opts.passwordSet === false ? null : new Date().toISOString()
+    })
+    .select('id, email, password_hash, password_set_at, created_at, ai_prefs')
     .single();
   if (error) {
     // 23505 = Postgres unique violation; same message the Blobs backend threw.
@@ -109,9 +118,114 @@ async function createUser(email, password) {
     id: data.id,
     email: data.email,
     passwordHash: data.password_hash,
+    passwordSetAt: data.password_set_at,
     createdAt: data.created_at,
+    aiPrefs: data.ai_prefs,
     accounts: {}
   };
+}
+
+// The two Settings writes target the users row directly - saveUser only
+// manages the connection tables and never touches users.
+async function setPassword(email, password) {
+  const { error } = await db()
+    .from('users')
+    .update({ password_hash: hashPassword(password), password_set_at: new Date().toISOString() })
+    .eq('email', email.toLowerCase());
+  if (error) fail(error, 'saving password');
+}
+
+async function saveAiPrefs(email, prefs) {
+  const { error } = await db()
+    .from('users')
+    .update({ ai_prefs: prefs })
+    .eq('email', email.toLowerCase());
+  if (error) fail(error, 'saving AI preferences');
+}
+
+async function saveAiInsight(email, insight) {
+  const { error } = await db()
+    .from('users')
+    .update({ ai_insight: insight })
+    .eq('email', email.toLowerCase());
+  if (error) fail(error, 'saving AI insight');
+}
+
+// --- Alert rules (created by the AI assistant) ---
+
+async function userIdFor(email) {
+  const { data: u, error } = await db()
+    .from('users')
+    .select('id')
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+  if (error) fail(error, 'looking up user');
+  if (!u) throw new Error('User not found.');
+  return u.id;
+}
+
+function assembleRule(row) {
+  return {
+    id: row.id,
+    metric: row.metric,
+    channel: row.channel,
+    comparison: row.comparison,
+    threshold: Number(row.threshold),
+    timeframe: row.timeframe,
+    enabled: row.enabled,
+    description: row.description,
+    createdAt: row.created_at
+  };
+}
+
+async function listAlertRules(email) {
+  const userId = await userIdFor(email);
+  const { data, error } = await db()
+    .from('alert_rules')
+    .select('id, metric, channel, comparison, threshold, timeframe, enabled, description, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) fail(error, 'loading alert rules');
+  return (data || []).map(assembleRule);
+}
+
+async function createAlertRule(email, rule) {
+  const userId = await userIdFor(email);
+  const { data, error } = await db()
+    .from('alert_rules')
+    .insert({
+      user_id: userId,
+      metric: rule.metric,
+      channel: rule.channel,
+      comparison: rule.comparison,
+      threshold: rule.threshold,
+      timeframe: rule.timeframe,
+      description: rule.description
+    })
+    .select('id, metric, channel, comparison, threshold, timeframe, enabled, description, created_at')
+    .single();
+  if (error) fail(error, 'saving alert rule');
+  return assembleRule(data);
+}
+
+async function updateAlertRule(email, ruleId, enabled) {
+  const userId = await userIdFor(email);
+  const { error } = await db()
+    .from('alert_rules')
+    .update({ enabled })
+    .eq('id', ruleId)
+    .eq('user_id', userId); // scoped so one user can never touch another's rule
+  if (error) fail(error, 'updating alert rule');
+}
+
+async function deleteAlertRule(email, ruleId) {
+  const userId = await userIdFor(email);
+  const { error } = await db()
+    .from('alert_rules')
+    .delete()
+    .eq('id', ruleId)
+    .eq('user_id', userId);
+  if (error) fail(error, 'deleting alert rule');
 }
 
 // Persists the (mutated) user object. Provider rows are upserted and their
@@ -204,4 +318,15 @@ async function saveUser(user) {
   }
 }
 
-module.exports = { getUser, createUser, saveUser };
+module.exports = {
+  getUser,
+  createUser,
+  saveUser,
+  setPassword,
+  saveAiPrefs,
+  saveAiInsight,
+  listAlertRules,
+  createAlertRule,
+  updateAlertRule,
+  deleteAlertRule
+};

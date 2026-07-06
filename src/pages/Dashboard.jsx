@@ -11,6 +11,7 @@ import SplitBar from '../components/SplitBar';
 import Insights from '../components/Insights';
 import HistoryCard from '../components/HistoryCard';
 import AdsSection from '../components/AdsSection';
+import AiInsights from '../components/AiInsights';
 import Banner from '../components/Banner';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
@@ -182,6 +183,8 @@ export default function Dashboard() {
         )}
 
         {statusError && <ErrorState message={statusError} onRetry={loadStatus} />}
+
+        <AiInsights />
 
         {data?.isDemo && data?.error && <Banner tone="warning">{data.error}</Banner>}
         {data?.isDemo && !data?.error && (

@@ -38,10 +38,25 @@ function getEmailFromRequest(headers) {
   }
 }
 
+// Whether this user ever set a password themselves. Accounts auto-created by
+// Google sign-in carry passwordSetAt: null; records predating the field
+// (undefined) are treated as set, matching the migration's backfill.
+function hasSetPassword(user) {
+  return user.passwordSetAt !== null;
+}
+
 module.exports = {
   getUser: backend.getUser,
   createUser: backend.createUser,
   saveUser: backend.saveUser,
+  setPassword: backend.setPassword,
+  saveAiPrefs: backend.saveAiPrefs,
+  saveAiInsight: backend.saveAiInsight,
+  listAlertRules: backend.listAlertRules,
+  createAlertRule: backend.createAlertRule,
+  updateAlertRule: backend.updateAlertRule,
+  deleteAlertRule: backend.deleteAlertRule,
+  hasSetPassword,
   verifyPassword,
   createSessionCookie,
   clearSessionCookie,
