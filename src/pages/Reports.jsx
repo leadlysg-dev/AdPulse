@@ -72,7 +72,7 @@ function PerformerList({ title, ads, metricLabel }) {
           <li key={ad.id} className="performer-row">
             <AdThumb url={ad.thumbnailUrl} name={ad.name} />
             <div className="performer-copy">
-              <span className="performer-name">{ad.name}</span>
+              <span className="performer-name" title={ad.name}>{ad.name}</span>
               <span className="performer-detail">
                 {money(ad.spend)} spent · {number(ad.results)} {metricLabel.toLowerCase()}
               </span>

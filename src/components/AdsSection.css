@@ -13,7 +13,7 @@
 }
 
 .ads-card {
-  padding: 8px 22px;
+  padding: 8px 20px;
 }
 
 /* Many tracked metrics -> the row grid grows; scroll it inside the card
@@ -24,10 +24,15 @@
 
 .ad-row {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  padding: 14px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--gridline);
+  transition: background-color var(--motion-fast);
+}
+
+.ads-card .ad-row:not(.ad-row-header):hover {
+  background: color-mix(in srgb, var(--gridline) 35%, transparent);
 }
 
 .ad-row:last-child {
@@ -35,7 +40,7 @@
 }
 
 .ad-row-header {
-  padding: 10px 0 6px;
+  padding: 8px 0 4px;
   font-size: 11px;
   color: var(--text-muted);
 }
@@ -64,7 +69,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .ad-name {

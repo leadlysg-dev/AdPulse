@@ -1,5 +1,5 @@
 .insights {
-  padding: 20px 22px;
+  padding: 20px;
 }
 
 .insights-head {
@@ -26,7 +26,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .insights-list li {

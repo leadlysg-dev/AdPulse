@@ -7,11 +7,11 @@
 .skeleton-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px; /* matches the KPI band, so content doesn't shift on load */
 }
 
 .skeleton-tile {
-  height: 88px;
+  height: 108px;
 }
 
 .skeleton-charts {

@@ -6,7 +6,7 @@
 .top-nav-inner {
   max-width: 960px;
   margin: 0 auto;
-  padding: 14px 24px;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -36,12 +36,13 @@
 }
 
 .top-nav-tab {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   text-decoration: none;
   padding: 6px 12px;
   border-radius: 999px;
   white-space: nowrap;
+  transition: color var(--motion-fast), background-color var(--motion-fast);
 }
 
 .top-nav-tab:hover {
@@ -67,9 +68,10 @@
 }
 
 .top-nav-logout {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   text-decoration: none;
+  transition: color var(--motion-fast);
 }
 
 .top-nav-logout:hover {

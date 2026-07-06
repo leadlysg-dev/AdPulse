@@ -260,6 +260,13 @@ export default function Assistant() {
 
               {rulesError && <ErrorState message={rulesError} onRetry={loadRules} />}
 
+              {!rulesError && rules === null && (
+                <div className="card alerts-loading" aria-hidden="true">
+                  <div className="skeleton alerts-skeleton-row" />
+                  <div className="skeleton alerts-skeleton-row" />
+                </div>
+              )}
+
               {!rulesError && rules && rules.length === 0 && (
                 <div className="card alerts-empty">
                   <p>No alerts yet.</p>

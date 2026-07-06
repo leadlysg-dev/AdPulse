@@ -69,7 +69,7 @@ export default function AdsSection({ ads, metrics, error, onRetry, googleConnect
               <div key={ad.id} className="ad-row" style={rowStyle}>
                 <Thumb url={ad.thumbnailUrl} name={ad.name} />
                 <div className="ad-row-copy">
-                  <p className="ad-name">{ad.name}</p>
+                  <p className="ad-name" title={ad.name}>{ad.name}</p>
                   {(ad.headline || ad.body) && (
                     <p className="ad-copy">
                       {ad.headline && <strong>{ad.headline}</strong>}

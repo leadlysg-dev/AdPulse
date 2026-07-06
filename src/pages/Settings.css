@@ -97,9 +97,9 @@
 }
 
 .password-form label {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
-  margin: 12px 0 4px;
+  margin: 16px 0 8px;
 }
 
 .password-form input {
@@ -110,6 +110,7 @@
   background: var(--surface-1);
   color: var(--text-primary);
   font-size: 14px;
+  transition: border-color var(--motion-fast);
 }
 
 .password-form input:focus {
@@ -208,7 +209,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--motion-fast);
 }
 
 .ai-group.is-disabled {
@@ -241,6 +242,7 @@
   font-size: 14px;
   font-family: var(--font-sans);
   resize: vertical;
+  transition: border-color var(--motion-fast);
 }
 
 .ai-field textarea:focus {
@@ -263,7 +265,7 @@
   border-radius: 999px;
   background: var(--gridline);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background-color var(--motion-fast), border-color var(--motion-fast);
 }
 
 .toggle:disabled {
@@ -283,7 +285,7 @@
   border-radius: 999px;
   background: var(--surface-2);
   box-shadow: var(--shadow-card);
-  transition: transform 0.15s ease;
+  transition: transform var(--motion-fast);
 }
 
 .toggle-on {

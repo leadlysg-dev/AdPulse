@@ -111,6 +111,7 @@
   border-radius: 999px;
   cursor: pointer;
   text-align: left;
+  transition: color var(--motion-fast), background-color var(--motion-fast);
 }
 
 .chat-suggestion:hover:not(:disabled) {
@@ -132,6 +133,7 @@
   background: var(--surface-1);
   color: var(--text-primary);
   font-size: 14px;
+  transition: border-color var(--motion-fast);
 }
 
 .chat-input-row input:focus {
@@ -219,6 +221,7 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: inline-flex;
+  transition: color var(--motion-fast), background-color var(--motion-fast);
 }
 
 .alert-row-delete:hover:not(:disabled) {
@@ -238,6 +241,17 @@
 .alert-row-confirm .btn {
   font-size: 12px;
   padding: 4px 12px;
+}
+
+.alerts-loading {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alerts-skeleton-row {
+  height: 40px;
 }
 
 .alerts-empty {
