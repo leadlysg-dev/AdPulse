@@ -97,9 +97,9 @@
 }
 
 .password-form label {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
-  margin: 12px 0 4px;
+  margin: 16px 0 8px;
 }
 
 .password-form input {
@@ -110,6 +110,7 @@
   background: var(--surface-1);
   color: var(--text-primary);
   font-size: 14px;
+  transition: border-color var(--motion-fast);
 }
 
 .password-form input:focus {
@@ -241,6 +242,7 @@
   font-size: 14px;
   font-family: var(--font-sans);
   resize: vertical;
+  transition: border-color var(--motion-fast);
 }
 
 .ai-field textarea:focus {

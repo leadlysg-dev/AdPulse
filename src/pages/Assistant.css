@@ -111,6 +111,7 @@
   border-radius: 999px;
   cursor: pointer;
   text-align: left;
+  transition: color var(--motion-fast), background-color var(--motion-fast);
 }
 
 .chat-suggestion:hover:not(:disabled) {
@@ -132,6 +133,7 @@
   background: var(--surface-1);
   color: var(--text-primary);
   font-size: 14px;
+  transition: border-color var(--motion-fast);
 }
 
 .chat-input-row input:focus {
