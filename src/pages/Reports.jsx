@@ -286,7 +286,8 @@ export default function Reports() {
               />
             ) : (
               <>
-                <div className="report-stats">
+                {/* spend + each metric + CTR + ROAS, so the band fills one row */}
+                <div className="report-stats" style={{ '--stat-cols': Math.min(metrics.length + 3, 6) }}>
                   <StatTile
                     label="Ad spend"
                     valueText={money(data.spend)}

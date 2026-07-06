@@ -3,13 +3,16 @@
   background: var(--page-plane);
 }
 
+/* Spacing rides a 4px scale throughout: 4 / 8 / 12 / 16 / 20 / 24.
+   Page rhythm is 24 between major blocks; the title and filter rows form one
+   header cluster 8 apart. */
 .reports-main {
   max-width: 960px;
   margin: 0 auto;
   padding: 24px 24px 64px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .reports-head {
@@ -23,6 +26,7 @@
 .reports-head h1 {
   font-size: 20px;
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .reports-subhead {
@@ -30,7 +34,7 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: -6px;
+  margin-top: -16px; /* 8px below the title row within the 24px page gap */
 }
 
 .reports-subhead .filter-period {
@@ -49,17 +53,19 @@
   pointer-events: none;
 }
 
-/* Overview tiles */
+/* Overview tiles: --stat-cols comes from the tile count so the band fills
+   exactly one row on desktop instead of leaving an orphan. */
 .report-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr));
   gap: 12px;
 }
 
 .report-stat {
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .report-stat-label {
@@ -70,13 +76,14 @@
 .report-stat-value {
   font-size: 22px;
   font-weight: 600;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
 .report-stat-meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   font-size: 12px;
 }
 
@@ -104,18 +111,19 @@
 .report-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .report-section h2 {
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .report-section-sub {
   font-size: 12px;
   color: var(--text-muted);
-  margin-top: -6px;
+  margin-top: -8px; /* 4px below the heading it captions */
 }
 
 .report-charts {
@@ -125,7 +133,7 @@
 }
 
 .report-weekly-card {
-  padding: 16px;
+  padding: 20px; /* matches TrendChart / SplitBar card insets */
 }
 
 /* Top & bottom performers */
@@ -136,23 +144,27 @@
   align-items: start;
 }
 
+.performer-list {
+  padding: 20px;
+}
+
 .performer-list h3 {
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .performer-list ol {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .performer-row {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -174,7 +186,7 @@
 .performer-copy {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -216,14 +228,20 @@
   .performer-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .report-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* With an odd tile count the first tile (Ad spend) goes full width, so the
+     rest pair up 2-by-2 and no card is ever stranded on its own row. */
+  .report-stat:first-child:nth-last-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 480px) {
   .reports-main {
-    padding: 16px 14px 48px;
-  }
-
-  .report-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px 16px 48px;
   }
 }
