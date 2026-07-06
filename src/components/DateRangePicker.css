@@ -1,7 +1,7 @@
 .range-picker {
   display: inline-flex;
   gap: 2px;
-  padding: 3px;
+  padding: 4px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface-1);
@@ -9,10 +9,11 @@
 }
 
 .range-picker-option {
+  transition: color var(--motion-fast), background-color var(--motion-fast);
   border: none;
   background: none;
   font-size: 13px;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 999px;
   color: var(--text-secondary);
   cursor: pointer;
