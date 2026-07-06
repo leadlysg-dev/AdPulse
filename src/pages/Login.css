@@ -53,6 +53,26 @@
   text-align: center;
 }
 
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--gridline);
+}
+
+.google-signin {
+  gap: 10px;
+}
+
 .login-toggle {
   text-align: center;
   margin-top: 18px;

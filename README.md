@@ -52,8 +52,12 @@ It is free.
    fill in the app name and your email, and save.
 3. Go to **APIs & Services → Credentials → Create Credentials → OAuth
    client ID**. Choose **Web application**. Under "Authorized redirect URIs"
-   add:
+   add both:
    `https://YOUR-SITE.netlify.app/.netlify/functions/auth-google-callback`
+   (for connecting Google Ads accounts) and
+   `https://YOUR-SITE.netlify.app/.netlify/functions/login-google-callback`
+   (for the "Sign in with Google" button — same client, identity scopes
+   only, no extra keys or env vars needed)
 4. Copy the **Client ID** and **Client Secret** shown after creation.
 5. Apply for a **Google Ads API developer token**: sign in to your Google
    Ads manager account (or create one, it's free) at ads.google.com, go to
