@@ -32,6 +32,13 @@ h1, h2, h3, p {
   margin: 0;
 }
 
+/* One visible focus treatment for every keyboard-focusable element that
+   doesn't define its own. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -51,25 +58,35 @@ h1, h2, h3, p {
   box-shadow: var(--shadow-card);
 }
 
+/* Buttons: three tiers, one size grammar.
+   primary (filled) > secondary (outline) > tertiary (text). */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   text-decoration: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 500;
-  padding: 10px 18px;
+  padding: 10px var(--space-4);
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  transition: opacity 0.15s ease, border-color 0.15s ease;
+  transition:
+    opacity var(--motion-fast),
+    border-color var(--motion-fast),
+    background-color var(--motion-fast),
+    color var(--motion-fast);
   white-space: nowrap;
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+  opacity: 0.8;
 }
 
 .btn-primary {
@@ -89,6 +106,17 @@ h1, h2, h3, p {
 
 .btn-secondary:hover:not(:disabled) {
   border-color: var(--baseline);
+}
+
+.btn-tertiary {
+  background: none;
+  color: var(--text-secondary);
+  padding: 6px var(--space-3);
+}
+
+.btn-tertiary:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--gridline);
 }
 
 .btn-block {
