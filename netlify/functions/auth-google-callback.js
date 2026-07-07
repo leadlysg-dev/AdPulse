@@ -1,9 +1,15 @@
-// Step 2 of Google connect flow: exchange the code for a refresh token, then list
-// every Google Ads account this customer can access, so they can pick which one(s)
-// to track - same pattern as the Meta callback.
+// Step 2 of Google connect flow: exchange the code for a refresh token, then
+// list every Google Ads account this customer can report on, so they can pick
+// which one to track - same pattern as the Meta callback.
+//
+// This function logs what Google actually answered at each step (scopes
+// granted, accounts listed, Search Console status) because its failures have
+// historically been invisible: a sunset API version returned errors here for
+// months and nothing recorded it. Tokens are never logged.
 const fetch = require('node-fetch');
 const { getUser, saveUser } = require('./_store');
 const { listScProperties } = require('./_google');
+const { listClientAccounts } = require('./_googleAds');
 
 exports.handler = async (event) => {
   const { code, state: email } = event.queryStringParameters || {};
@@ -22,50 +28,83 @@ exports.handler = async (event) => {
   });
   const tokenData = await tokenRes.json();
   if (!tokenData.access_token) {
+    console.error(
+      `[auth-google-callback] token exchange failed: ${tokenData.error || 'unknown'} ${tokenData.error_description || ''}`
+    );
     return { statusCode: 400, body: 'Could not connect Google account: ' + JSON.stringify(tokenData) };
   }
-
-  // List every Google Ads account this customer can access.
-  let adAccounts = [];
-  try {
-    const listRes = await fetch('https://googleads.googleapis.com/v17/customers:listAccessibleCustomers', {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-        'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-      }
-    });
-    const listData = await listRes.json();
-    adAccounts = (listData.resourceNames || []).map((rn) => {
-      const id = rn.split('/')[1];
-      return { id, name: `Google Ads account ${id}` };
-    });
-  } catch {
-    adAccounts = [];
-  }
-
-  // Same token also covers Search Console (webmasters.readonly is part of
-  // the consent) - list the customer's properties for the SEO tab's picker.
-  let scProperties = [];
-  try {
-    const sc = await listScProperties({ accessToken: tokenData.access_token });
-    scProperties = sc.properties || [];
-  } catch {
-    scProperties = [];
+  // Ground truth for "did the consent actually include Search Console":
+  // Google lists the granted scopes on the token response.
+  console.log(
+    `[auth-google-callback] scopes granted: ${tokenData.scope || '(none reported)'} | refresh_token: ${tokenData.refresh_token ? 'yes' : 'NO'}`
+  );
+  if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
+    console.error('[auth-google-callback] GOOGLE_ADS_DEVELOPER_TOKEN is not set - account listing will fail');
   }
 
   const user = await getUser(email);
   if (!user) return { statusCode: 401, body: 'Session expired. Please log in again.' };
 
+  // List the real, reportable ad accounts (managers expanded to their client
+  // accounts). Failure is logged with Google's own words - an unapproved
+  // developer token fails exactly here with a self-explanatory message.
+  const googleConn = { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token };
+  let adAccounts = [];
+  try {
+    adAccounts = await listClientAccounts(googleConn);
+    console.log(
+      `[auth-google-callback] reportable ad accounts: ${
+        adAccounts.length ? adAccounts.map((a) => `${a.id} (${a.name})`).join(', ') : '(none)'
+      }`
+    );
+  } catch (err) {
+    console.error(`[auth-google-callback] could not list Google Ads accounts: ${err.message}`);
+    adAccounts = [];
+  }
+
+  // Same token also covers Search Console - list the customer's properties
+  // for the SEO tab. A denied listing stays null (NOT an empty list): null
+  // means "couldn't check", [] means "checked, user has no properties", and
+  // the SEO tab treats those differently.
+  let scProperties = null;
+  try {
+    const sc = await listScProperties(googleConn);
+    scProperties = sc.properties;
+    if (scProperties === null) {
+      console.error(
+        `[auth-google-callback] Search Console listing denied: status=${sc.status} reason=${sc.reason} ${sc.message}`
+      );
+    } else {
+      console.log(`[auth-google-callback] Search Console properties: ${scProperties.length}`);
+    }
+  } catch (err) {
+    console.error(`[auth-google-callback] Search Console listing failed: ${err.message}`);
+  }
+
+  const previous = user.accounts.google || {};
   user.accounts.google = {
-    accessToken: tokenData.access_token,
-    refreshToken: tokenData.refresh_token,
+    accessToken: googleConn.accessToken,
+    // Google only re-issues a refresh token when the consent screen was
+    // actually shown; if this response omitted it, keep the one we have
+    // instead of wiping it (which would break all token refreshes).
+    refreshToken: tokenData.refresh_token || previous.refreshToken,
     adAccounts,
     selectedAdAccountId: adAccounts.length === 1 ? adAccounts[0].id : null,
-    scProperties,
-    selectedScSiteUrl: scProperties.length === 1 ? scProperties[0].siteUrl : null,
+    ...(scProperties !== null ? { scProperties } : {}),
+    selectedScSiteUrl:
+      scProperties && scProperties.length === 1 ? scProperties[0].siteUrl : null,
     connectedAt: new Date().toISOString()
   };
-  await saveUser(user);
+
+  try {
+    await saveUser(user);
+  } catch (err) {
+    console.error(`[auth-google-callback] saving the connection failed: ${err.message}`);
+    return {
+      statusCode: 500,
+      body: 'Google authorized the connection but saving it failed - check the function logs (a database migration may be missing).'
+    };
+  }
 
   const needsPicker = adAccounts.length > 1;
   return {

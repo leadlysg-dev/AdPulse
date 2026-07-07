@@ -23,13 +23,14 @@ async function refreshGoogleToken(refreshToken) {
 // Calls a Google API endpoint with the connection's token, refreshing it
 // once on a 401. Mutates google.accessToken in place and reports it via
 // tokenRefreshed so the caller can persist the fresh token.
-async function googleApi(google, { url, method = 'GET', body }) {
+async function googleApi(google, { url, method = 'GET', body, headers = {} }) {
   const attempt = (token) =>
     fetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
-        ...(body ? { 'Content-Type': 'application/json' } : {})
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...headers
       },
       body: body ? JSON.stringify(body) : undefined
     });
@@ -48,18 +49,32 @@ async function googleApi(google, { url, method = 'GET', body }) {
   return { status: res.status, json, tokenRefreshed };
 }
 
-// The Search Console properties this customer can access. Returns null when
-// the token lacks the webmasters.readonly scope (pre-SEO connections) so
-// callers can tell "needs reconnect" apart from "no properties".
+// The Search Console properties this customer can access. Returns null
+// properties when the call is denied, with the denial's status/reason so
+// callers can tell three situations apart:
+//   - token lacks the webmasters.readonly scope (reconnect fixes it)
+//   - the Search Console API is disabled on the OAuth client's Google
+//     Cloud project (reason 'accessNotConfigured' - reconnecting can
+//     never fix this; it must be enabled in the Cloud console)
+//   - no properties at all (empty array, not null)
 async function listScProperties(google) {
   const { status, json, tokenRefreshed } = await googleApi(google, {
     url: 'https://www.googleapis.com/webmasters/v3/sites'
   });
-  if (status === 401 || status === 403) return { properties: null, tokenRefreshed };
+  if (status === 401 || status === 403) {
+    const err = json.error || {};
+    return {
+      properties: null,
+      tokenRefreshed,
+      status,
+      reason: (err.errors && err.errors[0] && err.errors[0].reason) || err.status || '',
+      message: err.message || ''
+    };
+  }
   const properties = (json.siteEntry || [])
     .filter((s) => s.permissionLevel !== 'siteUnverifiedUser')
     .map((s) => ({ siteUrl: s.siteUrl, permission: s.permissionLevel }));
-  return { properties, tokenRefreshed };
+  return { properties, tokenRefreshed, status };
 }
 
 // One Search Analytics query. dimensions e.g. ['date'] | ['query'] | ['page'].

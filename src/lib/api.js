@@ -50,8 +50,10 @@ async function request(path, options = {}) {
 export const api = {
   getStatus: () => request('/.netlify/functions/get-status'),
 
-  getDashboardData: (view) =>
-    request(`/.netlify/functions/get-dashboard-data?${viewQuery(view)}`),
+  getDashboardData: (view, channel = 'all') =>
+    request(
+      `/.netlify/functions/get-dashboard-data?${viewQuery(view)}&channel=${encodeURIComponent(channel)}`
+    ),
 
   getHistory: () => request('/.netlify/functions/get-history'),
 
