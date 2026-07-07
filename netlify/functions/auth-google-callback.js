@@ -4,6 +4,7 @@
 const fetch = require('node-fetch');
 const { getUser, saveUser } = require('./_store');
 const { listScProperties } = require('./_google');
+const { listAccessibleCustomers, gadsSearch } = require('./_googleAds');
 
 exports.handler = async (event) => {
   const { code, state: email } = event.queryStringParameters || {};
@@ -25,21 +26,35 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Could not connect Google account: ' + JSON.stringify(tokenData) };
   }
 
-  // List every Google Ads account this customer can access.
+  // List every Google Ads account this customer can access, then fetch each
+  // account's real name (best-effort - an unnamed entry still works). The
+  // failure is logged, not swallowed: a sunset API version or unapproved
+  // developer token used to fail here invisibly, leaving nothing to pick.
+  const googleConn = { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token };
   let adAccounts = [];
   try {
-    const listRes = await fetch('https://googleads.googleapis.com/v17/customers:listAccessibleCustomers', {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-        'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-      }
-    });
-    const listData = await listRes.json();
-    adAccounts = (listData.resourceNames || []).map((rn) => {
-      const id = rn.split('/')[1];
-      return { id, name: `Google Ads account ${id}` };
-    });
-  } catch {
+    const { ids } = await listAccessibleCustomers(googleConn);
+    adAccounts = await Promise.all(
+      ids.slice(0, 25).map(async (id) => {
+        try {
+          const { results } = await gadsSearch(
+            googleConn,
+            id,
+            'SELECT customer.descriptive_name, customer.manager FROM customer LIMIT 1'
+          );
+          const c = (results[0] && results[0].customer) || {};
+          return {
+            id,
+            name: c.descriptiveName || `Google Ads account ${id}`,
+            manager: !!c.manager
+          };
+        } catch {
+          return { id, name: `Google Ads account ${id}` };
+        }
+      })
+    );
+  } catch (err) {
+    console.error(`[auth-google-callback] could not list Google Ads accounts: ${err.message}`);
     adAccounts = [];
   }
 

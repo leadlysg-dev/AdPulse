@@ -23,13 +23,14 @@ async function refreshGoogleToken(refreshToken) {
 // Calls a Google API endpoint with the connection's token, refreshing it
 // once on a 401. Mutates google.accessToken in place and reports it via
 // tokenRefreshed so the caller can persist the fresh token.
-async function googleApi(google, { url, method = 'GET', body }) {
+async function googleApi(google, { url, method = 'GET', body, headers = {} }) {
   const attempt = (token) =>
     fetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
-        ...(body ? { 'Content-Type': 'application/json' } : {})
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...headers
       },
       body: body ? JSON.stringify(body) : undefined
     });

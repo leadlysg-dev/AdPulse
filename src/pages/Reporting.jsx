@@ -67,8 +67,9 @@ function buildCards(data) {
     {
       id: 'lpv',
       label: 'Landing page views',
-      valueText: number(data.landingPageViews || 0),
-      pct: pctChange(data.landingPageViews, prev.landingPageViews),
+      // null = the channel doesn't have this concept (Google Ads view)
+      valueText: data.landingPageViews == null ? '—' : number(data.landingPageViews),
+      pct: data.landingPageViews == null ? null : pctChange(data.landingPageViews, prev.landingPageViews),
       goodUp: true,
       series: d.landingPageViews || [],
       fmt: number,
@@ -188,12 +189,12 @@ export default function Reporting() {
     }
   }, []);
 
-  const loadView = useCallback(async (nextView) => {
+  const loadView = useCallback(async (nextView, nextChannel) => {
     const requestId = ++viewRequestId.current;
     setDataError(null);
     setRefreshing(true);
     try {
-      const result = await api.getDashboardData(nextView);
+      const result = await api.getDashboardData(nextView, nextChannel);
       if (requestId !== viewRequestId.current) return;
       setData(result);
     } catch (err) {
@@ -210,14 +211,18 @@ export default function Reporting() {
   }, [loadStatus]);
 
   useEffect(() => {
-    loadView(view);
-  }, [view, loadView]);
+    loadView(view, channel);
+  }, [view, channel, loadView]);
 
   if (redirecting) return null;
 
   const initialLoading = data === null && !dataError;
   const noActivity =
-    data && !data.isDemo && data.spend === 0 && (data.metrics || []).every((m) => m.value === 0);
+    data &&
+    !data.isDemo &&
+    !data.googleNotReady &&
+    data.spend === 0 &&
+    (data.metrics || []).every((m) => m.value === 0);
 
   const cards = data ? buildCards(data) : [];
   const primary = data?.metrics?.[0] || null;
@@ -228,7 +233,7 @@ export default function Reporting() {
 
   async function saveGoal(metricId, targetCostPer) {
     await api.setGoal('meta', metricId, targetCostPer);
-    await loadView(view);
+    await loadView(view, channel);
   }
 
   return (
@@ -271,16 +276,34 @@ export default function Reporting() {
 
         {initialLoading && <DashboardSkeleton />}
 
-        {dataError && <ErrorState message={dataError} onRetry={() => loadView(view)} />}
+        {dataError && <ErrorState message={dataError} onRetry={() => loadView(view, channel)} />}
 
-        {channel === 'google' && !dataError && !initialLoading && (
+        {data?.googleError && !data.googleNotReady && (
+          <Banner tone="warning">
+            Couldn't fetch Google Ads figures — showing Meta only. ({data.googleError})
+          </Banner>
+        )}
+
+        {data?.googleNotReady === 'not-connected' && (
           <EmptyState
-            title="Google reporting isn't wired in yet"
-            message="Google Ads connects for sign-in, but its live figures aren't available in AdPulse yet. Switch to All channels or Meta to see your numbers."
+            title="Google isn't connected"
+            message="Connect your Google account in Settings to see Google Ads numbers here."
+          />
+        )}
+        {data?.googleNotReady === 'no-account' && (
+          <EmptyState
+            title="No Google Ads account selected"
+            message="Google is connected but no ad account is linked yet. Reconnect Google in Settings to pick one."
+          />
+        )}
+        {data?.googleNotReady === 'error' && (
+          <ErrorState
+            message={`Couldn't fetch Google Ads data: ${data.googleError}`}
+            onRetry={() => loadView(view, channel)}
           />
         )}
 
-        {data && !dataError && channel !== 'google' && (
+        {data && !dataError && !data.googleNotReady && (
           <div className={`reporting-body${refreshing ? ' is-refreshing' : ''}`}>
             {noActivity ? (
               <EmptyState
@@ -302,7 +325,9 @@ export default function Reporting() {
                       selected={activeId === c.id}
                       onSelect={() => setSelectedCard(c.id)}
                       onSaveGoal={
-                        c.metric && !data.isDemo ? (target) => saveGoal(c.metric.id, target) : undefined
+                        c.metric && !data.isDemo && c.metric.canSetGoal !== false
+                          ? (target) => saveGoal(c.metric.id, target)
+                          : undefined
                       }
                     />
                   ))}
@@ -318,23 +343,22 @@ export default function Reporting() {
                   />
                 )}
 
-                <section className="reporting-section">
-                  <SplitBar
-                    title="Spend by platform"
-                    formatValue={money}
-                    segments={[
-                      { name: 'Meta', value: data.metaSpend, color: 'var(--series-1)' },
-                      { name: 'Google', value: data.googleSpend, color: 'var(--series-2)' }
-                    ]}
-                  />
-                  {!data.isDemo && status?.googleConnected && (
-                    <p className="google-note">
-                      Google Ads is connected, but live Google figures aren't wired in yet — spend above is Meta only for now.
-                    </p>
-                  )}
-                </section>
+                {channel === 'all' && (
+                  <section className="reporting-section">
+                    <SplitBar
+                      title="Spend by platform"
+                      formatValue={money}
+                      segments={[
+                        { name: 'Meta', value: data.metaSpend, color: 'var(--series-1)' },
+                        { name: 'Google', value: data.googleSpend, color: 'var(--series-2)' }
+                      ]}
+                    />
+                  </section>
+                )}
 
-                {history?.weeks?.length > 0 && (
+                {/* Weekly history is built from the Meta account, so it
+                    doesn't belong under the Google-only filter. */}
+                {channel !== 'google' && history?.weeks?.length > 0 && (
                   <section className="reporting-section">
                     <h2>Last 12 weeks</h2>
                     <HistoryTable history={history} />
