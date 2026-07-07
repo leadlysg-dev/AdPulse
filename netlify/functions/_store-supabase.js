@@ -44,9 +44,13 @@ function byPosition(a, b) {
 function assembleProvider(row) {
   const provider = {
     accessToken: row.access_token,
-    adAccounts: (row.ad_accounts || [])
-      .sort(byPosition)
-      .map((a) => ({ id: a.external_id, name: a.name })),
+    adAccounts: (row.ad_accounts || []).sort(byPosition).map((a) => {
+      const account = { id: a.external_id, name: a.name };
+      // Google accounts reached through a manager (MCC) carry the manager
+      // id reporting calls must authenticate through.
+      if (a.login_customer_id) account.loginCustomerId = a.login_customer_id;
+      return account;
+    }),
     selectedAdAccountId: row.selected_ad_account_id,
     connectedAt: row.connected_at
   };
@@ -80,7 +84,9 @@ async function getUser(email) {
     .from('connected_accounts')
     .select(
       'id, provider, access_token, refresh_token, selected_ad_account_id, selected_sc_site_url, connected_at, ' +
-        'ad_accounts ( external_id, name, position ), ' +
+        // ad_accounts selects * so a not-yet-migrated login_customer_id
+        // column can't break every getUser call app-wide.
+        'ad_accounts ( * ), ' +
         'sc_properties ( site_url, permission, position ), ' +
         'selected_metrics ( metric_id, label, position, target_cost_per )'
     )
@@ -317,16 +323,24 @@ async function saveUser(user) {
     if (delAdsError) fail(delAdsError, `clearing ${provider} ad accounts`);
 
     if (acc.adAccounts && acc.adAccounts.length) {
-      const { error } = await db()
-        .from('ad_accounts')
-        .insert(
-          acc.adAccounts.map((a, i) => ({
-            connected_account_id: row.id,
-            external_id: a.id,
-            name: a.name,
-            position: i
-          }))
+      const rows = acc.adAccounts.map((a, i) => ({
+        connected_account_id: row.id,
+        external_id: a.id,
+        name: a.name,
+        position: i,
+        login_customer_id: a.loginCustomerId || null
+      }));
+      let { error } = await db().from('ad_accounts').insert(rows);
+      // Migration 007 adds login_customer_id; until it's run, retry without
+      // the column so connecting still works (MCC routing just won't stick).
+      if (error && /login_customer_id/.test(error.message || '')) {
+        console.error(
+          `[store] ad_accounts.login_customer_id missing - run migration 007. Saving without it: ${error.message}`
         );
+        ({ error } = await db()
+          .from('ad_accounts')
+          .insert(rows.map(({ login_customer_id, ...rest }) => rest)));
+      }
       if (error) fail(error, `saving ${provider} ad accounts`);
     }
 

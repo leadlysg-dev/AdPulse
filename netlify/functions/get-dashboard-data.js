@@ -31,10 +31,14 @@ const json = (statusCode, body) => ({
 const CHANNELS = ['all', 'meta', 'google'];
 
 // Current + previous period from Google Ads, in the dashboard's shape.
+// Accounts reached through a manager (MCC) carry the manager id to
+// authenticate the query through.
 async function googlePeriods(google, since, until, prevSince, prevUntil) {
+  const selected = (google.adAccounts || []).find((a) => a.id === google.selectedAdAccountId);
+  const opts = { loginCustomerId: selected && selected.loginCustomerId };
   const [cur, prev] = await Promise.all([
-    fetchGoogleDaily(google, google.selectedAdAccountId, since, until),
-    fetchGoogleDaily(google, google.selectedAdAccountId, prevSince, prevUntil)
+    fetchGoogleDaily(google, google.selectedAdAccountId, since, until, opts),
+    fetchGoogleDaily(google, google.selectedAdAccountId, prevSince, prevUntil, opts)
   ]);
   return { cur, prev, tokenRefreshed: cur.tokenRefreshed || prev.tokenRefreshed };
 }

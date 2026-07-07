@@ -14,12 +14,17 @@ const GOOGLE_ADS_API = 'https://googleads.googleapis.com/v22';
 
 // One GAQL search against a customer (ad account). Returns the result rows;
 // throws with Google's own message so callers can log/surface it.
-async function gadsSearch(google, customerId, query) {
+// loginCustomerId is required when the account is reached through a manager
+// (MCC): it names the manager the OAuth user actually has access via.
+async function gadsSearch(google, customerId, query, { loginCustomerId } = {}) {
   const { status, json, tokenRefreshed } = await googleApi(google, {
     url: `${GOOGLE_ADS_API}/customers/${customerId}/googleAds:search`,
     method: 'POST',
     body: { query },
-    headers: { 'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '' }
+    headers: {
+      'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '',
+      ...(loginCustomerId ? { 'login-customer-id': loginCustomerId } : {})
+    }
   });
   if (status !== 200) {
     const detail =
@@ -46,13 +51,64 @@ async function listAccessibleCustomers(google) {
   return { ids, tokenRefreshed };
 }
 
+// Every ad account the user can report on, expanded through managers.
+// listAccessibleCustomers returns the customers the OAuth user can LOG IN
+// to - for agency/MCC users that's the manager itself, not the ad accounts
+// under it, and managers can't answer metrics queries. customer_client
+// enumerates what's actually underneath (including the account itself for
+// plain accounts), so the picker always shows real, reportable accounts.
+// Each entry carries loginCustomerId - the accessible customer it was
+// reached through - which reporting calls must send as a header.
+async function listClientAccounts(google) {
+  const { ids } = await listAccessibleCustomers(google);
+  console.log(`[googleAds] accessible customers: ${ids.length ? ids.join(', ') : '(none)'}`);
+
+  const seen = new Set();
+  const accounts = [];
+  const errors = [];
+  for (const rootId of ids.slice(0, 10)) {
+    try {
+      const { results } = await gadsSearch(
+        google,
+        rootId,
+        'SELECT customer_client.id, customer_client.descriptive_name, customer_client.manager, ' +
+          "customer_client.status FROM customer_client WHERE customer_client.status = 'ENABLED'",
+        { loginCustomerId: rootId }
+      );
+      results.forEach((row) => {
+        const c = row.customerClient || {};
+        const id = String(c.id || '');
+        if (!id || c.manager || seen.has(id)) return;
+        seen.add(id);
+        accounts.push({
+          id,
+          name: c.descriptiveName || `Google Ads account ${id}`,
+          loginCustomerId: rootId
+        });
+      });
+    } catch (err) {
+      errors.push(`${rootId}: ${err.message}`);
+    }
+  }
+  if (errors.length) {
+    console.error(`[googleAds] customer_client lookup failed for: ${errors.join(' | ')}`);
+  }
+  // Nothing usable found and every lookup failed: surface the real reason
+  // (an unapproved developer token fails exactly here) instead of
+  // pretending the user has no accounts.
+  if (!accounts.length && errors.length) {
+    throw new Error(errors[0]);
+  }
+  return accounts;
+}
+
 // Daily spend/delivery/conversions for one account and window, keyed by day.
 // REST responses use camelCase and int64 metrics arrive as strings.
-async function fetchGoogleDaily(google, customerId, since, until) {
+async function fetchGoogleDaily(google, customerId, since, until, { loginCustomerId } = {}) {
   const query =
     'SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions ' +
     `FROM customer WHERE segments.date BETWEEN '${since}' AND '${until}'`;
-  const { results, tokenRefreshed } = await gadsSearch(google, customerId, query);
+  const { results, tokenRefreshed } = await gadsSearch(google, customerId, query, { loginCustomerId });
 
   const byDate = {};
   const totals = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
@@ -74,4 +130,10 @@ async function fetchGoogleDaily(google, customerId, since, until) {
   return { byDate, totals, tokenRefreshed };
 }
 
-module.exports = { GOOGLE_ADS_API, gadsSearch, listAccessibleCustomers, fetchGoogleDaily };
+module.exports = {
+  GOOGLE_ADS_API,
+  gadsSearch,
+  listAccessibleCustomers,
+  listClientAccounts,
+  fetchGoogleDaily
+};

@@ -7,6 +7,8 @@
 //   ok               - data included
 //   not-connected    - no Google connection at all
 //   needs-reconnect  - connected before the Search Console scope existed
+//   sc-api-disabled  - scope is granted but the Search Console API is turned
+//                      off on the OAuth client's Google Cloud project
 //   no-properties    - scope granted but no Search Console properties
 //   needs-site       - properties listed but none picked yet (list included)
 const { getEmailFromRequest, getUser, saveUser } = require('./_store');
@@ -78,6 +80,16 @@ exports.handler = async (event) => {
       dirty = listed.tokenRefreshed;
       if (listed.properties === null) {
         if (dirty) await saveUser(user);
+        console.error(
+          `[get-seo] Search Console listing denied: status=${listed.status} reason=${listed.reason} ${listed.message}`
+        );
+        // accessNotConfigured = the Search Console API is disabled on the
+        // OAuth client's Google Cloud project. The scope is fine and
+        // reconnecting can never fix it - only enabling the API can, so
+        // don't send the user back through consent for nothing.
+        if (listed.reason === 'accessNotConfigured' || /not been used in project|is disabled/i.test(listed.message)) {
+          return json(200, { state: 'sc-api-disabled' });
+        }
         return json(200, { state: 'needs-reconnect' });
       }
       properties = listed.properties;
@@ -107,6 +119,10 @@ exports.handler = async (event) => {
     if (dirty || daily.tokenRefreshed) await saveUser(user);
 
     if ([daily, prev, queries, pages].some((r) => r.status === 401 || r.status === 403)) {
+      const denied = [daily, prev, queries, pages].find((r) => r.status === 401 || r.status === 403);
+      console.error(
+        `[get-seo] Search Console query denied: status=${denied.status} ${JSON.stringify(denied.json.error || {})}`
+      );
       return json(200, { state: 'needs-reconnect' });
     }
     if ([daily, prev, queries, pages].some((r) => r.status >= 400)) {

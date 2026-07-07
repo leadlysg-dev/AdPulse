@@ -222,6 +222,22 @@ export default function Seo() {
           </div>
         )}
 
+        {data?.state === 'sc-api-disabled' && (
+          <div className="card seo-notice">
+            <p>The Search Console API is turned off for this app.</p>
+            <p className="seo-notice-sub">
+              Your Google account granted access, but the app's Google Cloud project has the Search
+              Console API disabled, so Google rejects every request. In the Google Cloud console, open
+              APIs &amp; Services for the project that owns this app's OAuth client, enable "Google
+              Search Console API", wait a few minutes, then try again. Reconnecting won't help until
+              it's enabled.
+            </p>
+            <button type="button" className="btn btn-primary seo-notice-action" onClick={() => loadSeo(view)}>
+              Try again
+            </button>
+          </div>
+        )}
+
         {data?.state === 'no-properties' && (
           <EmptyState
             title="No Search Console properties"
