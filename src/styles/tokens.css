@@ -12,7 +12,8 @@
   /* Color is functional: blue = results/accent, aqua = the Google platform
      split, orange = spend. Red/amber/green are status tokens only. */
   --series-1: #2a78d6; /* blue - results, accent */
-  --series-2: #1baf7a; /* aqua - google in the platform split */
+  --series-2: #1baf7a; /* aqua - google split, lead campaigns */
+  --series-3: #7c5cd6; /* violet - brand-awareness campaigns (CVD-validated vs series-2) */
   --series-8: #eb6834; /* orange - spend */
 
   --status-good: #0ca30c;
@@ -73,6 +74,7 @@
 
     --series-1: #3987e5;
     --series-2: #199e70;
+    --series-3: #8b6fe0;
     --series-8: #d95926;
 
     --status-good: #0ca30c;

@@ -57,6 +57,8 @@ export const api = {
 
   getHistory: () => request('/.netlify/functions/get-history'),
 
+  getReport: (view) => request(`/.netlify/functions/get-report?${viewQuery(view)}`),
+
   getAds: (view) => request(`/.netlify/functions/get-ads?${viewQuery(view)}`),
 
   listAccounts: () => request('/.netlify/functions/list-accounts'),

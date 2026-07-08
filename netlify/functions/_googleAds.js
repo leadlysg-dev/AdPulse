@@ -130,10 +130,30 @@ async function fetchGoogleDaily(google, customerId, since, until, { loginCustome
   return { byDate, totals, tokenRefreshed };
 }
 
+// Campaign-level daily rows for the report: one row per (campaign, day).
+async function fetchGoogleCampaignDaily(google, customerId, since, until, { loginCustomerId } = {}) {
+  const query =
+    'SELECT campaign.name, segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, ' +
+    `metrics.conversions FROM campaign WHERE segments.date BETWEEN '${since}' AND '${until}'`;
+  const { results, tokenRefreshed } = await gadsSearch(google, customerId, query, { loginCustomerId });
+  return {
+    rows: results.map((row) => ({
+      campaign: (row.campaign && row.campaign.name) || '(unnamed)',
+      date: row.segments && row.segments.date,
+      spend: Number((row.metrics || {}).costMicros || 0) / 1e6,
+      impressions: parseInt((row.metrics || {}).impressions || 0, 10),
+      clicks: parseInt((row.metrics || {}).clicks || 0, 10),
+      conversions: Number((row.metrics || {}).conversions || 0)
+    })),
+    tokenRefreshed
+  };
+}
+
 module.exports = {
   GOOGLE_ADS_API,
   gadsSearch,
   listAccessibleCustomers,
   listClientAccounts,
-  fetchGoogleDaily
+  fetchGoogleDaily,
+  fetchGoogleCampaignDaily
 };

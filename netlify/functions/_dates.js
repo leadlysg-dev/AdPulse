@@ -3,7 +3,7 @@
 // dashboard can show "vs previous period" comparisons. All dates are UTC
 // calendar days formatted YYYY-MM-DD, which is what Meta's time_range wants.
 
-const VALID_RANGES = ['last_7d', 'last_30d', 'this_month', 'last_month'];
+const VALID_RANGES = ['yesterday', 'last_7d', 'last_30d', 'last_90d', 'ytd', 'this_month', 'last_month'];
 
 function fmt(d) {
   return d.toISOString().slice(0, 10);
@@ -39,7 +39,22 @@ function resolveRange(range) {
     return { since: fmt(start), until: fmt(end), prevSince: fmt(prevStart), prevUntil: fmt(prevEnd) };
   }
 
-  const days = range === 'last_7d' ? 7 : 30;
+  if (range === 'yesterday') {
+    const y = addDays(today, -1);
+    const dayBefore = addDays(today, -2);
+    return { since: fmt(y), until: fmt(y), prevSince: fmt(dayBefore), prevUntil: fmt(dayBefore) };
+  }
+
+  if (range === 'ytd') {
+    const start = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+    // Previous period = the same-length window immediately before Jan 1.
+    const days = Math.round((today - start) / 86400000) + 1;
+    const prevUntil = addDays(start, -1);
+    const prevSince = addDays(prevUntil, -(days - 1));
+    return { since: fmt(start), until: fmt(today), prevSince: fmt(prevSince), prevUntil: fmt(prevUntil) };
+  }
+
+  const days = range === 'last_7d' ? 7 : range === 'last_90d' ? 90 : 30;
   const since = addDays(today, -(days - 1));
   const prevUntil = addDays(since, -1);
   const prevSince = addDays(prevUntil, -(days - 1));
