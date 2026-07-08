@@ -53,6 +53,7 @@ module.exports = {
   saveAiPrefs: backend.saveAiPrefs,
   getAiInsightCache: backend.getAiInsightCache,
   saveAiInsightCache: backend.saveAiInsightCache,
+  clearAiInsightCache: backend.clearAiInsightCache,
   listAlertRules: backend.listAlertRules,
   createAlertRule: backend.createAlertRule,
   updateAlertRule: backend.updateAlertRule,

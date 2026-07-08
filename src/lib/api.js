@@ -108,10 +108,16 @@ export const api = {
       body: JSON.stringify(prefs)
     }),
 
-  getAiInsights: (range, refresh = false) =>
+  getAiInsights: (range, refresh = false, check = false) =>
     request(
-      `/.netlify/functions/get-ai-insights?range=${encodeURIComponent(range)}${refresh ? '&refresh=1' : ''}`
+      `/.netlify/functions/get-ai-insights?range=${encodeURIComponent(range)}${refresh ? '&refresh=1' : ''}${check ? '&check=1' : ''}`
     ),
+
+  createAlert: (rule) =>
+    request('/.netlify/functions/create-alert', {
+      method: 'POST',
+      body: JSON.stringify(rule)
+    }),
 
   disconnectProvider: (provider) =>
     request('/.netlify/functions/disconnect-provider', {
@@ -120,6 +126,20 @@ export const api = {
     }),
 
   getSeo: (view) => request(`/.netlify/functions/get-seo?${viewQuery(view)}`),
+
+  getGbp: (view) => request(`/.netlify/functions/get-gbp?${viewQuery(view)}`),
+
+  selectGbpLocation: (locationId) =>
+    request('/.netlify/functions/select-gbp-location', {
+      method: 'POST',
+      body: JSON.stringify({ locationId })
+    }),
+
+  replyReview: (reviewId, comment) =>
+    request('/.netlify/functions/reply-review', {
+      method: 'POST',
+      body: JSON.stringify({ reviewId, comment })
+    }),
 
   selectScProperty: (siteUrl) =>
     request('/.netlify/functions/select-sc-property', {

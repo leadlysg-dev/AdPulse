@@ -120,15 +120,31 @@
 
 .report-kpi-tag {
   margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   background: var(--gridline);
   border-radius: 999px;
-  padding: 1px 7px;
+  padding: 2px 8px;
   vertical-align: middle;
   text-transform: none;
+}
+
+.report-kpi-tag .report-channel-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.report-kpi-tag.meta {
+  background: color-mix(in srgb, var(--series-2) 12%, transparent);
+}
+
+.report-kpi-tag.google {
+  background: color-mix(in srgb, var(--series-1) 12%, transparent);
 }
 
 /* Google "pick your metrics" nudge */
@@ -163,19 +179,19 @@
 }
 
 .report-channel {
-  padding: 14px 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   min-width: 0;
 }
 
 .report-channel.meta {
-  border-top: 3px solid var(--series-1);
+  border-top: 3px solid var(--series-2);
 }
 
 .report-channel.google {
-  border-top: 3px solid var(--series-8);
+  border-top: 3px solid var(--series-1);
 }
 
 .report-channel-head {
@@ -201,11 +217,11 @@
 }
 
 .report-channel-dot.meta {
-  background: var(--series-1);
+  background: var(--series-2);
 }
 
 .report-channel-dot.google {
-  background: var(--series-8);
+  background: var(--series-1);
 }
 
 .report-channel-badge {
@@ -220,7 +236,7 @@
 .report-channel-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 16px;
+  gap: 16px 20px;
 }
 
 .report-channel-grid dt {
@@ -232,11 +248,17 @@
 }
 
 .report-channel-grid dd {
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  margin-top: 2px;
+  margin-top: 4px;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .report-channel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Highlights */

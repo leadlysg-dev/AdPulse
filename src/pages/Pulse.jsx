@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import TopNav from '../components/TopNav';
 import AiInsights from '../components/AiInsights';
 import ChatPanel from '../components/ChatPanel';
+import AlertPresets from '../components/AlertPresets';
 import AlertsPanel from '../components/AlertsPanel';
 import DateRangePicker from '../components/DateRangePicker';
 import Banner from '../components/Banner';
@@ -111,10 +112,17 @@ export default function Pulse() {
                 </p>
               </div>
             ) : (
-              <div className="pulse-layout">
-                <ChatPanel onRulesCreated={() => setAlertsVersion((v) => v + 1)} />
-                <AlertsPanel reloadToken={alertsVersion} />
-              </div>
+              <>
+                <AlertPresets
+                  metaMetric={status?.metaPrimaryMetric}
+                  googleMetric={status?.googlePrimaryMetric}
+                  onRulesCreated={() => setAlertsVersion((v) => v + 1)}
+                />
+                <div className="pulse-layout">
+                  <ChatPanel onRulesCreated={() => setAlertsVersion((v) => v + 1)} />
+                  <AlertsPanel reloadToken={alertsVersion} />
+                </div>
+              </>
             )}
           </>
         )}

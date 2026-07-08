@@ -1,4 +1,4 @@
-const { getEmailFromRequest, getUser, saveUser } = require('./_store');
+const { getEmailFromRequest, getUser, saveUser, clearAiInsightCache } = require('./_store');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
@@ -16,6 +16,8 @@ exports.handler = async (event) => {
 
   user.accounts[provider].selectedAdAccountId = accountId;
   await saveUser(user);
+  // Fresh connection state -> stale insights; wipe so the next view regenerates.
+  await clearAiInsightCache(email).catch(() => {});
 
   return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true }) };
 };

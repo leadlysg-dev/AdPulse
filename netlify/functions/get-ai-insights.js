@@ -14,13 +14,11 @@ const crypto = require('crypto');
 const Anthropic = require('@anthropic-ai/sdk');
 const { getEmailFromRequest, getUser, getAiInsightCache, saveAiInsightCache } = require('./_store');
 const { VALID_RANGES, resolveRange } = require('./_dates');
-const { metaGet, readRow, sumRows, costPer } = require('./_meta');
-const { getSelectedMetrics } = require('./_metrics');
+const { buildSnapshot } = require('./_aiData');
 
 const MODEL = 'claude-haiku-4-5';
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const REFRESH_COOLDOWN_MS = 3 * 60 * 1000;
-const PERFORMER_COUNT = 3;
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -41,82 +39,12 @@ function dataHash(summaryData) {
   return crypto.createHash('sha256').update(JSON.stringify(summaryData)).digest('hex').slice(0, 32);
 }
 
-// Condense the selected period into the small object Claude actually needs.
-async function buildSummary(meta, range) {
-  const selectedMetrics = getSelectedMetrics(meta);
-  const metricIds = selectedMetrics.map((m) => m.id);
-  const { since, until, prevSince, prevUntil } = resolveRange(range);
-
-  const [rows, prevRows, adRows] = await Promise.all([
-    metaGet(`${meta.selectedAdAccountId}/insights`, {
-      fields: 'spend,actions,impressions,clicks',
-      time_range: JSON.stringify({ since, until }),
-      access_token: meta.accessToken
-    }),
-    metaGet(`${meta.selectedAdAccountId}/insights`, {
-      fields: 'spend,actions,impressions,clicks',
-      time_range: JSON.stringify({ since: prevSince, until: prevUntil }),
-      access_token: meta.accessToken
-    }),
-    metaGet(`${meta.selectedAdAccountId}/insights`, {
-      fields: 'ad_name,spend,actions',
-      level: 'ad',
-      time_range: JSON.stringify({ since, until }),
-      limit: 100,
-      access_token: meta.accessToken
-    })
-  ]);
-
-  const totals = sumRows(rows, metricIds);
-  const prev = sumRows(prevRows, metricIds);
-
-  const period = (t) => ({
-    spend: +t.spend.toFixed(2),
-    impressions: t.impressions,
-    clicks: t.clicks,
-    ctrPct: t.impressions > 0 ? +((t.clicks / t.impressions) * 100).toFixed(2) : null,
-    results: selectedMetrics.map((m) => ({
-      metric: m.label,
-      count: t.values[m.id],
-      costPerResult: costPer(t.spend, t.values[m.id]) || null
-    }))
-  });
-
-  // Best and worst active ads by cost per result on the primary metric.
-  const primary = selectedMetrics[0];
-  const ranked = adRows
-    .map((row) => {
-      const r = readRow(row, metricIds);
-      return { name: row.ad_name, spend: +r.spend.toFixed(2), results: r.values[primary.id] };
-    })
-    .filter((a) => a.spend > 0)
-    .map((a) => ({ ...a, costPerResult: a.results > 0 ? +(a.spend / a.results).toFixed(2) : null }));
-  const withResults = ranked.filter((a) => a.costPerResult !== null);
-  const topAds = withResults.sort((a, b) => a.costPerResult - b.costPerResult).slice(0, PERFORMER_COUNT);
-  const bottomAds = ranked
-    .filter((a) => !topAds.includes(a))
-    .sort((a, b) => (b.costPerResult ?? Infinity) - (a.costPerResult ?? Infinity) || b.spend - a.spend)
-    .slice(0, PERFORMER_COUNT);
-
-  return {
-    platform: 'Meta Ads',
-    range,
-    currentPeriod: { since, until, ...period(totals) },
-    previousPeriod: { since: prevSince, until: prevUntil, ...period(prev) },
-    goals: selectedMetrics
-      .filter((m) => m.targetCostPer != null)
-      .map((m) => ({ metric: m.label, targetCostPerResult: m.targetCostPer })),
-    topAdsByCostPerResult: topAds,
-    worstAdsByCostPerResult: bottomAds
-  };
-}
-
 const SYSTEM_PROMPT = `You are the performance analyst inside AdPulse, a self-serve ad reporting dashboard. You write short summaries of ad performance for small-business owners who are not marketing experts.
 
 Rules:
 - Plain English. No hype, no jargon, no filler. Never use words like "amazing" or "great news".
 - Always use the real numbers from the data: dollar amounts, counts, percentages. Amounts are in the account currency; write them with $.
-- The data covers the date range the customer selected (currentPeriod). Compare it to previousPeriod and say what changed, what's working, and what needs attention. Name the period naturally from its dates (e.g. "the last 7 days", "this month so far") - never call it something longer or shorter than it is.
+- The data covers the date range the customer selected (currentPeriod vs previousPeriod), and may include sections for Meta Ads, Google Ads, and organic Google Search - cover every section that's present, and never mix one platform's numbers into another's. Name the period naturally from its dates (e.g. "the last 7 days", "this month so far") - never call it something longer or shorter than it is.
 - Structure: 2-3 sentences of overview first, then 2-4 bullet takeaways. Each bullet starts with "- " on its own line. No headings, no markdown other than the bullets.
 - If a metric is null or zero, don't invent it - either skip it or say it plainly (e.g. "no leads were recorded").
 - Keep the whole thing under 160 words.`;
@@ -162,6 +90,10 @@ exports.handler = async (event) => {
   const qs = event.queryStringParameters || {};
   const range = VALID_RANGES.includes(qs.range) ? qs.range : 'last_7d';
   const wantsRefresh = qs.refresh === '1';
+  // check=1 (sent when the customer switches range): skip the 10-minute
+  // fast-path and verify against the live numbers - the cached text is
+  // reused only when the data fingerprint still matches.
+  const wantsCheck = qs.check === '1';
 
   const meta = user.accounts.meta;
   if (!meta || !meta.selectedAdAccountId) {
@@ -192,7 +124,7 @@ exports.handler = async (event) => {
     json(200, { enabled: true, available: true, range, summary, generatedAt, ...extra });
 
   // Fresh cache: serve it as-is. Zero Meta calls, zero Anthropic tokens.
-  if (cached && !wantsRefresh && ageMs < CACHE_TTL_MS) {
+  if (cached && !wantsRefresh && !wantsCheck && ageMs < CACHE_TTL_MS) {
     return respond(cached.summary, cached.generatedAt, { cached: true });
   }
 
@@ -203,7 +135,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const summaryData = await buildSummary(meta, range);
+    const summaryData = await buildSnapshot(user, range);
     const hash = dataHash(summaryData);
 
     // Expired entry but identical numbers: reuse the text, bump the clock,

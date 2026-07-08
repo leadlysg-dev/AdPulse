@@ -61,7 +61,12 @@ function Kpi({ label, tag, value, sub, pct, goodUp }) {
     <div className="card report-kpi">
       <span className="report-kpi-label">
         {label}
-        {tag && <span className="report-kpi-tag">{tag}</span>}
+        {tag && (
+          <span className={`report-kpi-tag ${tag.toLowerCase()}`}>
+            <span className={`report-channel-dot ${tag.toLowerCase()}`} aria-hidden="true" />
+            {tag}
+          </span>
+        )}
       </span>
       <span className="report-kpi-value">{value}</span>
       {sub && <span className="report-kpi-sub">{sub}</span>}
@@ -72,50 +77,50 @@ function Kpi({ label, tag, value, sub, pct, goodUp }) {
 
 // The approved 8-card structure for one platform: spend -> delivery ->
 // engagement -> conversion (that platform's own metrics) -> raw counts.
+const CARD_CAP = 16; // 4-across grid, up to 4 rows
+
+// One count + one cost-per card per selected metric.
+const metricPair = (m, tag) => [
+  {
+    key: `count:${tag || ''}:${m.id}`,
+    label: m.label,
+    tag,
+    value: number(m.value),
+    pct: pctChange(m.value, m.previous),
+    goodUp: true
+  },
+  {
+    key: `costper:${tag || ''}:${m.id}`,
+    label: `Cost / ${costPerLabel(m.label)}`,
+    tag,
+    value: m.costPer === null ? '—' : money(m.costPer),
+    sub: m.targetCostPer ? `Target ${money(m.targetCostPer)}` : undefined,
+    pct: rateDelta(m.costPer, m.prevCostPer),
+    goodUp: false
+  }
+];
+
 function platformCards(ch, tag) {
   const r = ratios(ch.totals);
   const rp = ratios(ch.previous);
-  const primary = ch.metrics[0] || null;
-  const countCards = [
-    ...ch.metrics.map((m) => ({
-      key: `count:${m.id}`,
-      label: m.label,
-      tag,
-      value: number(m.value),
-      sub: `${m.label} recorded in the period`,
-      pct: pctChange(m.value, m.previous),
-      goodUp: true
-    })),
-    ch.landingPageViews && {
-      key: 'lpv',
-      label: 'Landing page views',
-      tag,
-      value: number(ch.landingPageViews.value),
-      sub: 'From the Meta pixel',
-      pct: pctChange(ch.landingPageViews.value, ch.landingPageViews.previous),
-      goodUp: true
-    }
-  ]
-    .filter(Boolean)
-    .slice(0, 2);
-
   return [
     { key: 'spend', label: 'Ad spend', value: money(ch.totals.spend), pct: pctChange(ch.totals.spend, ch.previous.spend), goodUp: null },
     { key: 'impressions', label: 'Impressions', value: number(ch.totals.impressions), pct: pctChange(ch.totals.impressions, ch.previous.impressions), goodUp: true },
     { key: 'clicks', label: 'Clicks', value: number(ch.totals.clicks), sub: 'Total link clicks', pct: pctChange(ch.totals.clicks, ch.previous.clicks), goodUp: true },
     { key: 'ctr', label: 'CTR', value: r.ctr === null ? '—' : percent(r.ctr), sub: 'Clicks / impressions', pct: rateDelta(r.ctr, rp.ctr), goodUp: true },
     { key: 'cpc', label: 'Cost per click', value: r.cpc === null ? '—' : money(r.cpc), pct: rateDelta(r.cpc, rp.cpc), goodUp: false },
-    primary && {
-      key: 'costper',
-      label: `Cost / ${costPerLabel(primary.label)}`,
-      tag,
-      value: primary.costPer === null ? '—' : money(primary.costPer),
-      sub: primary.targetCostPer ? `Target ${money(primary.targetCostPer)}` : undefined,
-      pct: rateDelta(primary.costPer, primary.prevCostPer),
-      goodUp: false
+    ch.landingPageViews && {
+      key: 'lpv',
+      label: 'Landing page views',
+      value: number(ch.landingPageViews.value),
+      sub: 'From the Meta pixel',
+      pct: pctChange(ch.landingPageViews.value, ch.landingPageViews.previous),
+      goodUp: true
     },
-    ...countCards
-  ].filter(Boolean);
+    ...ch.metrics.flatMap((m) => metricPair(m, tag))
+  ]
+    .filter(Boolean)
+    .slice(0, CARD_CAP);
 }
 
 // "All channels": delivery blends (same unit on both platforms); conversion
@@ -130,39 +135,15 @@ function blendedCards(meta, google) {
   const r = ratios(cur);
   const rp = ratios(prev);
 
-  const conversionPair = (ch, tag) => {
-    const primary = ch.metrics[0];
-    if (!primary) return [];
-    return [
-      {
-        key: `costper:${tag}`,
-        label: `Cost / ${costPerLabel(primary.label)}`,
-        tag,
-        value: primary.costPer === null ? '—' : money(primary.costPer),
-        sub: primary.targetCostPer ? `Target ${money(primary.targetCostPer)}` : undefined,
-        pct: rateDelta(primary.costPer, primary.prevCostPer),
-        goodUp: false
-      },
-      {
-        key: `count:${tag}`,
-        label: primary.label,
-        tag,
-        value: number(primary.value),
-        pct: pctChange(primary.value, primary.previous),
-        goodUp: true
-      }
-    ];
-  };
-
   return [
     { key: 'spend', label: 'Ad spend', value: money(cur.spend), sub: 'Meta + Google', pct: pctChange(cur.spend, prev.spend), goodUp: null },
     { key: 'impressions', label: 'Impressions', value: number(cur.impressions), sub: 'Meta + Google', pct: pctChange(cur.impressions, prev.impressions), goodUp: true },
     { key: 'clicks', label: 'Clicks', value: number(cur.clicks), sub: 'Total link clicks', pct: pctChange(cur.clicks, prev.clicks), goodUp: true },
     { key: 'ctr', label: 'CTR', value: r.ctr === null ? '—' : percent(r.ctr), pct: rateDelta(r.ctr, rp.ctr), goodUp: true },
     { key: 'cpc', label: 'Cost per click', value: r.cpc === null ? '—' : money(r.cpc), pct: rateDelta(r.cpc, rp.cpc), goodUp: false },
-    ...conversionPair(meta, 'Meta'),
-    ...(googleOk ? conversionPair(google, 'Google') : [])
-  ];
+    ...meta.metrics.flatMap((m) => metricPair(m, 'Meta')),
+    ...(googleOk ? google.metrics.flatMap((m) => metricPair(m, 'Google')) : [])
+  ].slice(0, CARD_CAP);
 }
 
 export default function Reporting() {

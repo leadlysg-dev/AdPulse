@@ -76,6 +76,12 @@ async function saveAiInsightCache(email, range, entry) {
   });
 }
 
+async function clearAiInsightCache(email) {
+  await withUser(email, (user) => {
+    delete user.aiInsightCache;
+  });
+}
+
 // --- Alert rules: stored as an array on the user blob ---
 
 async function withUser(email, mutate) {
@@ -129,6 +135,7 @@ module.exports = {
   saveAiPrefs,
   getAiInsightCache,
   saveAiInsightCache,
+  clearAiInsightCache,
   listAlertRules,
   createAlertRule,
   updateAlertRule,

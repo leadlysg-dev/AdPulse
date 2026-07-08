@@ -3,13 +3,14 @@ import { api } from '../lib/api';
 import './ChatPanel.css';
 
 const SUGGESTIONS = [
-  'Let me know when CPA falls below $10',
-  'Tell me if Meta spend goes over $500 in a day',
-  'Alert me when ROAS drops below 2x this week'
+  'How did this week compare to last?',
+  'Which ad is performing best?',
+  'Where is my budget going?',
+  'Alert me when CPA goes above $50'
 ];
 
 const GREETING =
-  "Hi! I can set up performance alerts for you in plain English — CPA, ROAS, spend, CTR, or conversions on Meta, Google, or both. What would you like to watch?";
+  "Hi! Ask me anything about your ad performance — Meta, Google Ads, or organic Google Search — or set up alerts in plain English. Try one of the suggestions below.";
 
 // The assistant chat, unchanged from the standalone Assistant page - it just
 // lives inside Pulse now. onRulesCreated fires when the assistant saves a

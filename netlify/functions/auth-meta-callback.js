@@ -2,7 +2,7 @@
 // ad accounts this customer manages, and save it against their account. If they
 // manage more than one, they'll be sent to pick which one(s) to track.
 const fetch = require('node-fetch');
-const { getUser, saveUser } = require('./_store');
+const { getUser, saveUser, clearAiInsightCache } = require('./_store');
 
 exports.handler = async (event) => {
   const { code, state: email } = event.queryStringParameters || {};
@@ -45,6 +45,7 @@ exports.handler = async (event) => {
     connectedAt: new Date().toISOString()
   };
   await saveUser(user);
+  await clearAiInsightCache(email).catch(() => {});
 
   const needsPicker = adAccounts.length > 1;
   return {

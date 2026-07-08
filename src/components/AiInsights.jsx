@@ -53,10 +53,10 @@ export default function AiInsights({ range }) {
   const currentRange = useRef(range);
   currentRange.current = range;
 
-  const load = useCallback(async (targetRange, { refresh = false, silent = false } = {}) => {
+  const load = useCallback(async (targetRange, { refresh = false, silent = false, check = false } = {}) => {
     if (refresh) setRefreshing(true);
     try {
-      const result = await api.getAiInsights(targetRange, refresh);
+      const result = await api.getAiInsights(targetRange, refresh, check);
       viewCache.current[targetRange] = result;
       if (currentRange.current !== targetRange) return; // user toggled away mid-flight
       setData(result);
@@ -79,18 +79,24 @@ export default function AiInsights({ range }) {
     }
   }, []);
 
+  const firstRange = useRef(true);
   useEffect(() => {
     setNotice('');
+    // A range switch always verifies against the live numbers (check) so a
+    // changed account never shows a stale summary; the very first load can
+    // take the cache fast-path.
+    const isSwitch = !firstRange.current;
+    firstRange.current = false;
     const seen = viewCache.current[range];
     if (seen) {
       // Instant: render the known summary, revalidate quietly behind it.
       setData(seen);
       setLoading(false);
       setFailed(false);
-      load(range, { silent: true });
+      load(range, { silent: true, check: isSwitch });
     } else {
       setLoading(true);
-      load(range, {});
+      load(range, { check: isSwitch });
     }
   }, [range, load]);
 

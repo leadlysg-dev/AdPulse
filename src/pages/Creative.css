@@ -123,6 +123,7 @@
 }
 
 .preview-card {
+  transition: border-color var(--motion-fast);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -209,4 +210,32 @@
   .creative-main {
     padding: 16px 16px 48px;
   }
+}
+
+/* Platform badge on preview cards */
+.preview-platform {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.preview-platform.meta {
+  color: var(--good-text);
+  background: color-mix(in srgb, var(--series-2) 12%, transparent);
+}
+
+.preview-platform.google {
+  color: var(--series-1);
+  background: color-mix(in srgb, var(--series-1) 12%, transparent);
+}
+
+.creative-footnote {
+  font-size: var(--text-micro);
+  color: var(--text-muted);
 }
