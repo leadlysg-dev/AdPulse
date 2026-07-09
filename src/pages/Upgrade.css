@@ -1,0 +1,90 @@
+.upgrade-page {
+  min-height: 100vh;
+  background: var(--page-plane);
+}
+
+.upgrade-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.upgrade-main h1 {
+  font-size: var(--text-page-title);
+  font-weight: 600;
+}
+
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.upgrade-plan {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upgrade-plan.pro {
+  border-top: 3px solid var(--series-1);
+}
+
+.upgrade-plan-name {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.upgrade-plan-price {
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.upgrade-plan-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--gridline);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.upgrade-plan-badge.current {
+  color: var(--good-text);
+  background: color-mix(in srgb, var(--series-2) 12%, transparent);
+}
+
+.upgrade-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.upgrade-features li::before {
+  content: '\2713  ';
+  color: var(--series-2);
+}
+
+.upgrade-note {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.upgrade-note a {
+  color: var(--series-1);
+}
+
+@media (max-width: 560px) {
+  .upgrade-grid {
+    grid-template-columns: 1fr;
+  }
+}

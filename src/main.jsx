@@ -11,6 +11,7 @@ import Settings from './pages/Settings';
 import Seo from './pages/Seo';
 import SelectAccount from './pages/SelectAccount';
 import SelectMetrics from './pages/SelectMetrics';
+import Upgrade from './pages/Upgrade';
 
 // The marketing site is now the public front door, so "/" just routes into
 // the app: logged-in visitors go to Pulse, everyone else to login.
@@ -55,6 +56,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/creative.html" element={<Creative />} />
         <Route path="/seo.html" element={<Seo />} />
         <Route path="/settings.html" element={<Settings />} />
+        <Route path="/upgrade.html" element={<Upgrade />} />
         <Route path="/select-account.html" element={<SelectAccount />} />
         <Route path="/select-metrics.html" element={<SelectMetrics />} />
         <Route path="/dashboard.html" element={<LegacyRedirect to="/pulse.html" />} />

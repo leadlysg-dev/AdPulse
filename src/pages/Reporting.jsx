@@ -10,6 +10,7 @@ import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import DashboardSkeleton from '../components/DashboardSkeleton';
 import { PairedTrendChart } from '../components/report/ReportCharts';
+import LockedSection from '../components/LockedSection';
 import './Reporting.css';
 
 const CHANNELS = [
@@ -20,6 +21,50 @@ const CHANNELS = [
 
 const RESULT_COLOR = 'var(--series-2)';
 const COST_COLOR = 'var(--series-8)';
+
+// The Pro visualization lineup - a teaser only; none of these are built
+// yet. Picking one shows what's coming, nothing more.
+const PRO_VIZ = [
+  'Funnel flow (Sankey): impressions → clicks → results',
+  'Spend heatmap calendar (weekday × week)',
+  'Campaign race chart (animated spend over time)',
+  'Geo map: results by region',
+  'Hour-of-day performance matrix',
+  'Creative fatigue curve (frequency vs CTR decay)',
+  'Lead cohort grid (quality by week)',
+  'Budget pacing gauge',
+  'Spend vs results scatter with trendline',
+  'Share-of-voice donut'
+];
+
+function ProVizPicker() {
+  const [picked, setPicked] = useState('');
+  return (
+    <div className="card report-proviz">
+      <div className="report-proviz-row">
+        <label className="report-control-label" htmlFor="proviz">Visualize</label>
+        <select
+          id="proviz"
+          className="report-proviz-select"
+          value={picked}
+          onChange={(e) => setPicked(e.target.value)}
+        >
+          <option value="">Advanced visualizations (Pro)…</option>
+          {PRO_VIZ.map((v) => (
+            <option key={v} value={v}>{v}</option>
+          ))}
+        </select>
+        <span className="report-proviz-badge">Pro</span>
+      </div>
+      {picked && (
+        <p className="report-proviz-note">
+          “{picked}” arrives with the Pro plan — <Link to="/upgrade.html">see plans</Link>. Nothing to
+          preview here yet.
+        </p>
+      )}
+    </div>
+  );
+}
 
 // "1 Jul 2026"
 const longDate = (iso) =>
@@ -319,6 +364,9 @@ export default function Reporting() {
               </div>
             )}
 
+            <ProVizPicker />
+
+            <LockedSection title="daily trend charts, campaign highlights, and weekly history">
             {trendPrimary && (
               <PairedTrendChart
                 title={`Daily ${trendPrimary.label.toLowerCase()} & cost trend`}
@@ -360,6 +408,7 @@ export default function Reporting() {
                 <HistoryTable history={history} />
               </section>
             )}
+            </LockedSection>
           </>
         )}
       </div>
