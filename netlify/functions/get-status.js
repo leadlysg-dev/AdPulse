@@ -35,6 +35,9 @@ exports.handler = async (event) => {
       // a forced redirect, so pre-feature connections aren't interrupted).
       googleNeedsMetrics:
         !!google && !!google.selectedAdAccountId && !(google.selectedMetrics && google.selectedMetrics.length),
+      // Primary tracked metric per platform, for metric-aware alert presets.
+      metaPrimaryMetric: (meta && meta.selectedMetrics && meta.selectedMetrics[0]) || { id: 'lead', label: 'Leads' },
+      googlePrimaryMetric: (google && google.selectedMetrics && google.selectedMetrics[0]) || null,
       scSiteUrl: (google && google.selectedScSiteUrl) || null,
       // For the Settings page: "Change password" vs "Set password", and the
       // saved AI preferences (null until first saved).

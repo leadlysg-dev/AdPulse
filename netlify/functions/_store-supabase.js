@@ -16,7 +16,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { hashPassword } = require('./_password');
 
-const PROVIDERS = ['meta', 'google'];
+const PROVIDERS = ['meta', 'google', 'gbp'];
 
 let client;
 function db() {
@@ -171,6 +171,14 @@ async function getAiInsightCache(email, range) {
     summary: data.summary,
     generatedAt: data.generated_at
   };
+}
+
+// Wipe every cached insight for a user - called when a platform connects
+// or the tracked metrics change, so the next view regenerates fresh.
+async function clearAiInsightCache(email) {
+  const userId = await userIdFor(email);
+  const { error } = await db().from('ai_insight_cache').delete().eq('user_id', userId);
+  if (error) fail(error, 'clearing insight cache');
 }
 
 async function saveAiInsightCache(email, range, entry) {
@@ -395,6 +403,7 @@ module.exports = {
   saveAiPrefs,
   getAiInsightCache,
   saveAiInsightCache,
+  clearAiInsightCache,
   listAlertRules,
   createAlertRule,
   updateAlertRule,

@@ -7,6 +7,7 @@ const { getEmailFromRequest, getUser } = require('./_store');
 const { VALID_RANGES, resolveRange, resolveCustomRange } = require('./_dates');
 const { metaGet, readRow } = require('./_meta');
 const { getSelectedMetrics } = require('./_metrics');
+const { gadsSearch } = require('./_googleAds');
 const { demoAds } = require('./_demo');
 
 const json = (statusCode, body) => ({
@@ -74,7 +75,52 @@ exports.handler = async (event) => {
       })
       .sort((a, b) => b.spend - a.spend);
 
-    return json(200, { isDemo: false, range, metrics: selectedMetrics, ads });
+    // Google ad previews ride along when Google is reporting: enabled ads
+    // with their responsive-ad text (and image URL where the ad has one),
+    // spend and conversions. Failure degrades to Meta-only, never an error.
+    let googleAds = [];
+    let googleStatus = 'not-connected';
+    const google = user.accounts.google;
+    if (google && google.selectedAdAccountId) {
+      googleStatus = 'ok';
+      try {
+        const account = (google.adAccounts || []).find((a) => a.id === google.selectedAdAccountId);
+        const { results } = await gadsSearch(
+          google,
+          google.selectedAdAccountId,
+          'SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.ad.type, ' +
+            'ad_group_ad.ad.responsive_search_ad.headlines, ad_group_ad.ad.responsive_search_ad.descriptions, ' +
+            'ad_group_ad.ad.image_ad.image_url, campaign.name, ' +
+            'metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.all_conversions ' +
+            `FROM ad_group_ad WHERE segments.date BETWEEN '${since}' AND '${until}' ` +
+            "AND ad_group_ad.status = 'ENABLED' ORDER BY metrics.cost_micros DESC LIMIT 30",
+          { loginCustomerId: account && account.loginCustomerId }
+        );
+        googleAds = results.map((row) => {
+          const ad = (row.adGroupAd && row.adGroupAd.ad) || {};
+          const rsa = ad.responsiveSearchAd || {};
+          const m = row.metrics || {};
+          return {
+            id: String(ad.id || ''),
+            platform: 'google',
+            name: ad.name || (row.campaign && row.campaign.name) || 'Google ad',
+            headline: (rsa.headlines && rsa.headlines[0] && rsa.headlines[0].text) || null,
+            body: (rsa.descriptions && rsa.descriptions[0] && rsa.descriptions[0].text) || null,
+            imageUrl: (ad.imageAd && ad.imageAd.imageUrl) || null,
+            thumbnailUrl: null,
+            spend: +(Number(m.costMicros || 0) / 1e6).toFixed(2),
+            impressions: parseInt(m.impressions || 0, 10),
+            clicks: parseInt(m.clicks || 0, 10),
+            conversions: +Number(m.allConversions || 0).toFixed(1)
+          };
+        });
+      } catch (err) {
+        console.error(`[get-ads] Google ads fetch failed: ${err.message}`);
+        googleStatus = 'error';
+      }
+    }
+
+    return json(200, { isDemo: false, range, metrics: selectedMetrics, ads, googleAds, googleStatus });
   } catch (err) {
     return json(502, { error: 'Could not fetch your ads from Meta. ' + err.message });
   }

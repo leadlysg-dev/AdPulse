@@ -1,121 +1,111 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
-import { fmtDate, number, pctChange, percent } from '../lib/format';
+import { fmtDate, number } from '../lib/format';
 import TopNav from '../components/TopNav';
-import DateRangePicker from '../components/DateRangePicker';
-import KpiCard from '../components/KpiCard';
-import TrendChart from '../components/TrendChart';
+import DateRangePicker, { REPORT_RANGES } from '../components/DateRangePicker';
 import Banner from '../components/Banner';
 import ErrorState from '../components/ErrorState';
-import EmptyState from '../components/EmptyState';
 import './Seo.css';
 
-const position = (v) => (v == null ? '—' : `#${(+Number(v).toFixed(1)).toLocaleString()}`);
+const TILES = [
+  { key: 'profileViews', label: 'Profile views', sub: 'Search + Maps' },
+  { key: 'searchAppearances', label: 'Search appearances', sub: 'Google Search' },
+  { key: 'mapsViews', label: 'Maps views', sub: 'Google Maps' },
+  { key: 'calls', label: 'Calls', sub: 'Tapped your number' },
+  { key: 'websiteClicks', label: 'Website clicks', sub: 'From your profile' },
+  { key: 'directionRequests', label: 'Direction requests', sub: 'Asked for the route' }
+];
 
-function buildCards(data) {
-  const t = data.totals;
-  const p = data.previous || {};
-  return [
-    {
-      id: 'clicks',
-      label: 'Clicks',
-      valueText: number(t.clicks),
-      pct: pctChange(t.clicks, p.clicks),
-      goodUp: true,
-      series: data.daily.clicks,
-      fmt: number,
-      color: 'var(--series-1)'
-    },
-    {
-      id: 'impressions',
-      label: 'Impressions',
-      valueText: number(t.impressions),
-      pct: pctChange(t.impressions, p.impressions),
-      goodUp: true,
-      series: data.daily.impressions,
-      fmt: number,
-      color: 'var(--series-1)'
-    },
-    {
-      id: 'ctr',
-      label: 'CTR',
-      valueText: t.ctrPct == null ? '—' : percent(t.ctrPct),
-      pct: t.ctrPct == null ? null : pctChange(t.ctrPct, p.ctrPct),
-      goodUp: true,
-      series: data.daily.clicks.map((c, i) =>
-        data.daily.impressions[i] > 0 ? +((c / data.daily.impressions[i]) * 100).toFixed(2) : 0
-      ),
-      fmt: percent,
-      color: 'var(--series-2)'
-    },
-    {
-      id: 'position',
-      label: 'Average position',
-      valueText: position(t.avgPosition),
-      // Lower position = higher ranking, so a drop is good news.
-      pct: t.avgPosition == null ? null : pctChange(t.avgPosition, p.avgPosition),
-      goodUp: false,
-      series: data.daily.avgPosition,
-      fmt: position,
-      color: 'var(--series-8)'
-    }
-  ];
+function Stars({ rating }) {
+  if (rating == null) return null;
+  return (
+    <span className="gbp-stars" aria-label={`${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i} className={i <= Math.round(rating) ? 'gbp-star on' : 'gbp-star'} aria-hidden="true">
+          ★
+        </span>
+      ))}
+    </span>
+  );
 }
 
-function QueryTable({ title, rows, keyLabel, linkKeys = false }) {
+function Review({ review, isDemo, onReplied }) {
+  const [replying, setReplying] = useState(false);
+  const [text, setText] = useState('');
+  const [state, setState] = useState('idle');
+  const [error, setError] = useState('');
+
+  async function send() {
+    if (!text.trim() || state === 'saving') return;
+    setState('saving');
+    setError('');
+    try {
+      await api.replyReview(review.id, text.trim());
+      setState('idle');
+      setReplying(false);
+      onReplied(review.id, text.trim());
+    } catch (err) {
+      setState('idle');
+      setError(err.message);
+    }
+  }
+
   return (
-    <section className="seo-section">
-      <h2>{title}</h2>
-      <div className="card seo-table-card">
-        <div className="seo-table-scroll">
-          <table className="seo-table">
-            <caption className="visually-hidden">{title}</caption>
-            <thead>
-              <tr>
-                <th scope="col" className="seo-col-key">{keyLabel}</th>
-                <th scope="col">Clicks</th>
-                <th scope="col">Impressions</th>
-                <th scope="col">CTR</th>
-                <th scope="col">Avg position</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.key}>
-                  <th scope="row" className="seo-col-key" title={r.key}>
-                    {linkKeys ? (
-                      <a href={r.key} target="_blank" rel="noreferrer">{r.key}</a>
-                    ) : (
-                      r.key
-                    )}
-                  </th>
-                  <td>{number(r.clicks)}</td>
-                  <td>{number(r.impressions)}</td>
-                  <td>{r.ctrPct == null ? '—' : percent(r.ctrPct)}</td>
-                  <td>{position(r.avgPosition)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <li className="card gbp-review">
+      <div className="gbp-review-head">
+        <span className="gbp-review-name">{review.reviewer}</span>
+        <Stars rating={review.rating} />
+        <span className="gbp-review-date">{fmtDate(review.createTime.slice(0, 10))}</span>
       </div>
-    </section>
+      {review.comment && <p className="gbp-review-text">{review.comment}</p>}
+      {review.reply ? (
+        <div className="gbp-review-reply">
+          <span className="gbp-review-reply-label">Your reply</span>
+          <p>{review.reply}</p>
+        </div>
+      ) : replying ? (
+        <div className="gbp-reply-form">
+          <textarea
+            className="gbp-reply-input"
+            rows="3"
+            placeholder="Write a short, personal reply…"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          {error && <p className="gbp-reply-error">{error}</p>}
+          <div className="gbp-reply-actions">
+            <button type="button" className="btn btn-secondary" onClick={() => setReplying(false)}>
+              Cancel
+            </button>
+            <button type="button" className="btn btn-primary" disabled={!text.trim() || state === 'saving'} onClick={send}>
+              {state === 'saving' ? 'Posting…' : 'Post reply'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-secondary gbp-reply-open"
+          disabled={isDemo}
+          title={isDemo ? 'Connect your Business Profile to reply' : undefined}
+          onClick={() => setReplying(true)}
+        >
+          Reply
+        </button>
+      )}
+    </li>
   );
 }
 
 export default function Seo() {
   const [view, setView] = useState('last_30d');
-  const [selectedCard, setSelectedCard] = useState('clicks');
-
   const [status, setStatus] = useState(null);
   const [statusError, setStatusError] = useState(null);
   const [redirecting, setRedirecting] = useState(false);
-
   const [data, setData] = useState(null);
   const [dataError, setDataError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [pickBusy, setPickBusy] = useState(false);
-
   const viewRequestId = useRef(0);
 
   const loadStatus = useCallback(async () => {
@@ -133,12 +123,12 @@ export default function Seo() {
     }
   }, []);
 
-  const loadSeo = useCallback(async (nextView) => {
+  const loadData = useCallback(async (nextView) => {
     const requestId = ++viewRequestId.current;
     setDataError(null);
     setRefreshing(true);
     try {
-      const result = await api.getSeo(nextView);
+      const result = await api.getGbp(nextView);
       if (requestId !== viewRequestId.current) return;
       setData(result);
     } catch (err) {
@@ -152,26 +142,27 @@ export default function Seo() {
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
-
   useEffect(() => {
-    loadSeo(view);
-  }, [view, loadSeo]);
+    loadData(view);
+  }, [view, loadData]);
 
   if (redirecting) return null;
 
-  async function pickProperty(siteUrl) {
+  async function pickLocation(locationId) {
     setPickBusy(true);
     try {
-      await api.selectScProperty(siteUrl);
-      await loadSeo(view);
+      await api.selectGbpLocation(locationId);
+      await loadData(view);
     } finally {
       setPickBusy(false);
     }
   }
 
-  const cards = data?.state === 'ok' ? buildCards(data) : [];
-  const activeCard = cards.find((c) => c.id === selectedCard) || cards[0] || null;
-  const chartLabels = data?.daily ? data.daily.dates.map(fmtDate) : [];
+  const onReplied = (reviewId, text) =>
+    setData((d) => ({
+      ...d,
+      reviews: d.reviews.map((r) => (r.id === reviewId ? { ...r, reply: text } : r))
+    }));
 
   return (
     <div className="seo-page">
@@ -179,13 +170,13 @@ export default function Seo() {
 
       <main className="seo-main">
         <div className="seo-head">
-          <h1>SEO</h1>
-          <DateRangePicker value={view} onChange={setView} allowCustom />
+          <h1>Local SEO</h1>
+          <DateRangePicker value={view} onChange={setView} allowCustom presets={REPORT_RANGES} />
         </div>
 
         {data?.state === 'ok' && (
           <div className="seo-subhead">
-            <span className="seo-site">{data.isDemo ? 'Sample property' : data.siteUrl}</span>
+            <span className="seo-site">{data.isDemo ? 'Sample business' : data.locationName}</span>
             <span className="filter-period">
               {fmtDate(data.since)} – {fmtDate(data.until)}
             </span>
@@ -193,12 +184,27 @@ export default function Seo() {
         )}
 
         {statusError && <ErrorState message={statusError} onRetry={loadStatus} />}
-        {dataError && <ErrorState message={dataError} onRetry={() => loadSeo(view)} />}
+        {dataError && <ErrorState message={dataError} onRetry={() => loadData(view)} />}
 
         {data?.isDemo && (
           <Banner tone="info">
-            This is sample data. Connect Google in Settings to see your real search performance.
+            This is sample data. Connect your Google Business Profile to manage your real presence and
+            reviews.
           </Banner>
+        )}
+
+        {data?.isDemo && (
+          <div className="card seo-notice">
+            <p>Connect Google Business Profile</p>
+            <p className="seo-notice-sub">
+              A separate one-time Google consent (read/manage your Business Profile). Heads up: Google
+              gates Business Profile API access behind an approval form — data appears once your access
+              request is approved.
+            </p>
+            <a className="btn btn-primary seo-notice-action" href="/.netlify/functions/auth-gbp">
+              Connect Business Profile
+            </a>
+          </div>
         )}
 
         {!data && !dataError && (
@@ -209,57 +215,28 @@ export default function Seo() {
           </div>
         )}
 
-        {data?.state === 'needs-reconnect' && (
+        {data?.state === 'api-pending' && (
           <div className="card seo-notice">
-            <p>Search Console access needs one more permission.</p>
+            <p>Business Profile API access is pending Google approval.</p>
             <p className="seo-notice-sub">
-              Your Google account was connected before SEO reporting existed. Reconnect once to grant
-              read-only Search Console access alongside Google Ads.
+              Your profile is connected, but Google grants Business Profile API access per project via an
+              access-request form (new projects start with zero quota). Submit the request in the Google
+              Cloud console for this app's project, then check back — no reconnect needed.
             </p>
-            <a className="btn btn-primary seo-notice-action" href="/.netlify/functions/auth-google">
-              Reconnect Google
-            </a>
-          </div>
-        )}
-
-        {data?.state === 'sc-api-disabled' && (
-          <div className="card seo-notice">
-            <p>The Search Console API is turned off for this app.</p>
-            <p className="seo-notice-sub">
-              Your Google account granted access, but the app's Google Cloud project has the Search
-              Console API disabled, so Google rejects every request. In the Google Cloud console, open
-              APIs &amp; Services for the project that owns this app's OAuth client, enable "Google
-              Search Console API", wait a few minutes, then try again. Reconnecting won't help until
-              it's enabled.
-            </p>
-            <button type="button" className="btn btn-primary seo-notice-action" onClick={() => loadSeo(view)}>
-              Try again
+            <button type="button" className="btn btn-primary seo-notice-action" onClick={() => loadData(view)}>
+              Check again
             </button>
           </div>
         )}
 
-        {data?.state === 'no-properties' && (
-          <EmptyState
-            title="No Search Console properties"
-            message="This Google account doesn't have access to any verified Search Console properties. Verify your site in Google Search Console, then reconnect."
-          />
-        )}
-
-        {data?.state === 'needs-site' && (
+        {data?.state === 'needs-location' && (
           <div className="card seo-notice">
-            <p>Which website should AdPulse track?</p>
-            <p className="seo-notice-sub">Pick the Search Console property this dashboard reports on.</p>
+            <p>Which location should AdPulse manage?</p>
             <ul className="seo-property-list">
               {data.properties.map((p) => (
-                <li key={p.siteUrl}>
-                  <button
-                    type="button"
-                    className="seo-property-option"
-                    disabled={pickBusy}
-                    onClick={() => pickProperty(p.siteUrl)}
-                  >
-                    <span className="seo-property-url">{p.siteUrl}</span>
-                    {p.permission && <span className="seo-property-perm">{p.permission}</span>}
+                <li key={p.id}>
+                  <button type="button" className="seo-property-option" disabled={pickBusy} onClick={() => pickLocation(p.id)}>
+                    <span className="seo-property-url">{p.name}</span>
                   </button>
                 </li>
               ))}
@@ -269,43 +246,48 @@ export default function Seo() {
 
         {data?.state === 'unavailable' && (
           <ErrorState
-            message="Couldn't fetch Search Console data right now — please try again in a moment."
-            onRetry={() => loadSeo(view)}
+            message="Couldn't fetch Business Profile data right now — please try again in a moment."
+            onRetry={() => loadData(view)}
           />
         )}
 
         {data?.state === 'ok' && (
           <div className={`seo-body${refreshing ? ' is-refreshing' : ''}`}>
-            <div className="seo-band">
-              {cards.map((c) => (
-                <KpiCard
-                  key={c.id}
-                  metricId={c.id}
-                  label={c.label}
-                  valueText={c.valueText}
-                  delta={{ pct: c.pct, goodWhenUp: c.goodUp }}
-                  selected={activeCard?.id === c.id}
-                  onSelect={() => setSelectedCard(c.id)}
-                />
-              ))}
-            </div>
-
-            {activeCard && (
-              <TrendChart
-                title={`${activeCard.label} over time`}
-                labels={chartLabels}
-                values={activeCard.series}
-                color={activeCard.color}
-                formatValue={activeCard.fmt}
-              />
+            {data.metrics && (
+              <div className="gbp-band">
+                {TILES.map((t) => (
+                  <div key={t.key} className="card gbp-tile">
+                    <span className="gbp-tile-label">{t.label}</span>
+                    <span className="gbp-tile-value">{number(data.metrics[t.key])}</span>
+                    <span className="gbp-tile-sub">{t.sub}</span>
+                  </div>
+                ))}
+              </div>
             )}
 
-            <QueryTable title="Top search queries" rows={data.topQueries} keyLabel="Query" />
-            <QueryTable title="Top pages" rows={data.topPages} keyLabel="Page" linkKeys={!data.isDemo} />
+            <section className="seo-section">
+              <div className="gbp-reviews-head">
+                <h2>Recent reviews</h2>
+                {data.averageRating != null && (
+                  <span className="gbp-rating-summary">
+                    <Stars rating={data.averageRating} /> {data.averageRating.toFixed(1)} ·{' '}
+                    {number(data.totalReviewCount)} reviews
+                  </span>
+                )}
+              </div>
+              {data.reviews.length === 0 ? (
+                <p className="seo-footnote">No reviews in view yet.</p>
+              ) : (
+                <ul className="gbp-review-list">
+                  {data.reviews.map((r) => (
+                    <Review key={r.id} review={r} isDemo={data.isDemo} onReplied={onReplied} />
+                  ))}
+                </ul>
+              )}
+            </section>
 
             <p className="seo-footnote">
-              Search data from Google Search Console — Google publishes it with a delay of about two
-              days, so the most recent days may still fill in.
+              Data from your Google Business Profile. Replies you post here publish publicly on Google.
             </p>
           </div>
         )}

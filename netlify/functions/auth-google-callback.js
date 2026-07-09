@@ -7,7 +7,7 @@
 // historically been invisible: a sunset API version returned errors here for
 // months and nothing recorded it. Tokens are never logged.
 const fetch = require('node-fetch');
-const { getUser, saveUser } = require('./_store');
+const { getUser, saveUser, clearAiInsightCache } = require('./_store');
 const { listScProperties } = require('./_google');
 const { listClientAccounts } = require('./_googleAds');
 
@@ -98,6 +98,8 @@ exports.handler = async (event) => {
 
   try {
     await saveUser(user);
+    // A (re)connected platform changes what the insights cover.
+    await clearAiInsightCache(email).catch(() => {});
   } catch (err) {
     console.error(`[auth-google-callback] saving the connection failed: ${err.message}`);
     return {

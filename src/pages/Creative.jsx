@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { money, number } from '../lib/format';
 import TopNav from '../components/TopNav';
-import DateRangePicker from '../components/DateRangePicker';
+import DateRangePicker, { REPORT_RANGES } from '../components/DateRangePicker';
 import Banner from '../components/Banner';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
@@ -81,6 +81,7 @@ export default function Creative() {
 
   const metrics = ads?.metrics || [];
   const primary = metrics[0] || null;
+  const googleAds = ads?.googleAds || [];
 
   // Rows with derived cost-per-result, sorted by the active column.
   const rows = (ads?.ads || []).map((ad) => {
@@ -112,7 +113,7 @@ export default function Creative() {
       <main className="creative-main">
         <div className="creative-head">
           <h1>Creative</h1>
-          <DateRangePicker value={view} onChange={setView} />
+          <DateRangePicker value={view} onChange={setView} allowCustom presets={REPORT_RANGES} />
         </div>
 
         {statusError && <ErrorState message={statusError} onRetry={loadStatus} />}
@@ -139,7 +140,7 @@ export default function Creative() {
         {!adsError && ads && rows.length > 0 && (
           <div className={`creative-body${refreshing ? ' is-refreshing' : ''}`}>
             <section className="creative-section">
-              <h2>Performance by ad</h2>
+              <h2>Performance by ad · Meta</h2>
               <div className="card creative-table-card">
                 <div className="creative-table-scroll">
                   <table className="creative-table">
@@ -187,10 +188,13 @@ export default function Creative() {
               <h2>Ad previews</h2>
               <div className="preview-grid">
                 {rows.map((ad) => (
-                  <article key={ad.id} className="card preview-card">
+                  <article key={`meta:${ad.id}`} className="card preview-card">
                     <PreviewImage ad={ad} />
                     <div className="preview-copy">
-                      <span className="preview-name" title={ad.name}>{ad.name}</span>
+                      <span className="preview-name" title={ad.name}>
+                        <span className="preview-platform meta">Meta</span>
+                        {ad.name}
+                      </span>
                       {ad.headline && <p className="preview-headline">{ad.headline}</p>}
                       {ad.body && <p className="preview-body">{ad.body}</p>}
                       <span className="preview-stats">
@@ -200,7 +204,29 @@ export default function Creative() {
                     </div>
                   </article>
                 ))}
+                {googleAds.map((ad) => (
+                  <article key={`google:${ad.id}`} className="card preview-card">
+                    <PreviewImage ad={ad} />
+                    <div className="preview-copy">
+                      <span className="preview-name" title={ad.name}>
+                        <span className="preview-platform google">Google</span>
+                        {ad.name}
+                      </span>
+                      {ad.headline && <p className="preview-headline">{ad.headline}</p>}
+                      {ad.body && <p className="preview-body">{ad.body}</p>}
+                      <span className="preview-stats">
+                        {money(ad.spend)} spent · {number(ad.conversions)} conv.
+                      </span>
+                    </div>
+                  </article>
+                ))}
               </div>
+              {googleAds.length > 0 && (
+                <p className="creative-footnote">
+                  Google previews are built from each ad's assets (headlines, descriptions, images) —
+                  Google doesn't provide rendered previews over its API.
+                </p>
+              )}
             </section>
           </div>
         )}

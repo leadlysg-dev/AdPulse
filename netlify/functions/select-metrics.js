@@ -2,7 +2,7 @@
 // selectedMetrics = [{ id, label, targetCostPer? }] alongside the ad
 // account they picked. Re-saving the selection keeps any cost-per targets
 // already set on metrics that survive the edit.
-const { getEmailFromRequest, getUser, saveUser } = require('./_store');
+const { getEmailFromRequest, getUser, saveUser, clearAiInsightCache } = require('./_store');
 const { canonicalKeyFor } = require('./_metrics');
 
 const MAX_METRICS = 10;
@@ -57,6 +57,8 @@ exports.handler = async (event) => {
 
   user.accounts[provider].selectedMetrics = cleaned;
   await saveUser(user);
+  // Fresh connection state -> stale insights; wipe so the next view regenerates.
+  await clearAiInsightCache(email).catch(() => {});
 
   return {
     statusCode: 200,

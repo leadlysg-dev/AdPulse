@@ -229,3 +229,163 @@
     padding: 16px 16px 48px;
   }
 }
+
+/* --- Local SEO / Business Profile --- */
+.gbp-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gbp-tile {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.gbp-tile-label {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.gbp-tile-value {
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.gbp-tile-sub {
+  font-size: var(--text-caption);
+  color: var(--text-muted);
+}
+
+.gbp-reviews-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gbp-rating-summary {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.gbp-stars {
+  letter-spacing: 1px;
+}
+
+.gbp-star {
+  color: var(--gridline);
+}
+
+.gbp-star.on {
+  color: var(--status-warning);
+}
+
+.gbp-review-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gbp-review {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gbp-review-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gbp-review-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.gbp-review-date {
+  margin-left: auto;
+  font-size: var(--text-caption);
+  color: var(--text-muted);
+}
+
+.gbp-review-text {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.gbp-review-reply {
+  border-left: 3px solid var(--series-1);
+  padding: 4px 0 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gbp-review-reply-label {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.gbp-review-reply p {
+  font-size: var(--text-sm);
+}
+
+.gbp-reply-open {
+  align-self: flex-start;
+}
+
+.gbp-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gbp-reply-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  resize: vertical;
+}
+
+.gbp-reply-input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.gbp-reply-error {
+  font-size: var(--text-caption);
+  color: var(--status-critical);
+}
+
+.gbp-reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .gbp-band {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
