@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './TopNav.css';
 
 const TABS = [
-  { to: '/pulse.html', label: 'Pulse' },
+  { to: '/pulse.html', label: 'PulseAI' },
   { to: '/reporting.html', label: 'Reporting' },
   { to: '/creative.html', label: 'Creative' },
   { to: '/seo.html', label: 'Local SEO' },
@@ -11,23 +12,25 @@ const TABS = [
 
 export default function TopNav({ email }) {
   const { pathname } = useLocation();
+  // Until the real logo file lands at public/assets/leadly-logo.svg, the
+  // brand falls back to a text wordmark - never a broken image.
+  const [logoMissing, setLogoMissing] = useState(false);
 
   return (
     <header className="top-nav">
       <div className="top-nav-inner">
         <div className="top-nav-brand">
-          <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
-            <rect width="32" height="32" rx="8" fill="var(--series-1)" />
-            <path
-              d="M7 21 L13 13 L18 18 L25 8"
-              stroke="#fff"
-              strokeWidth="2.5"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {logoMissing ? (
+            <span className="top-nav-leadly">Leadly</span>
+          ) : (
+            <img
+              className="top-nav-logo"
+              src="/assets/leadly-logo.svg"
+              alt="Leadly"
+              onError={() => setLogoMissing(true)}
             />
-          </svg>
-          <span>Leadly</span>
+          )}
+          <span className="top-nav-product">Pulse</span>
         </div>
         <nav className="top-nav-tabs" aria-label="Main">
           {TABS.map((t) => (

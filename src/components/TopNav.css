@@ -16,8 +16,32 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
+}
+
+/* The Leadly logo anchors the lockup at a fixed height. */
+.top-nav-logo {
+  display: block;
+  height: 20px;
+  width: auto;
+  max-width: 110px;
+}
+
+/* Text fallback until the logo file exists. */
+.top-nav-leadly {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+/* Product wordmark: brand color, lighter weight than a logo - reads as
+   "Workspace" next to the Google mark, not as a tagline. */
+.top-nav-product {
   font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--series-1);
+  line-height: 1;
 }
 
 .top-nav-tabs {
@@ -118,7 +142,7 @@
     display: none;
   }
 
-  .top-nav-brand span {
+  .top-nav-product {
     display: none;
   }
 

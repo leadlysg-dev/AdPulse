@@ -280,7 +280,7 @@ export default function Reporting() {
           <EmptyState title="No Google Ads account selected" message="Google is connected but no ad account is linked yet. Reconnect Google in Settings to pick one." />
         ) : google.status === 'no-metrics' ? (
           <div className="card report-notice">
-            <p>Which Google conversions should Leadly track?</p>
+            <p>Which Google conversions should Pulse track?</p>
             <p className="report-notice-sub">
               Google's conversion actions are configured separately from Meta's — pick the ones that
               matter to your business and this view fills in.

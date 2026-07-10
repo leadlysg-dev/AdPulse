@@ -231,7 +231,7 @@ export default function Seo() {
 
         {data?.state === 'needs-location' && (
           <div className="card seo-notice">
-            <p>Which location should Leadly manage?</p>
+            <p>Which location should Pulse manage?</p>
             <ul className="seo-property-list">
               {data.properties.map((p) => (
                 <li key={p.id}>

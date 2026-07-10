@@ -63,7 +63,7 @@ const CREATE_ALERT_TOOL = {
   }
 };
 
-const SYSTEM_PROMPT = `You are the assistant inside Leadly, a self-serve ad reporting dashboard for small-business owners. Your job is to help users set up performance alerts in plain English.
+const SYSTEM_PROMPT = `You are the assistant inside Leadly Pulse, a self-serve ad reporting dashboard for small-business owners. Your job is to help users set up performance alerts in plain English.
 
 What you can do: create alert rules via the create_alert tool. The metrics you can watch are CPA (cost per result), ROAS, ad spend, CTR, and conversions, on Meta, Google, or all channels, measured per day, week, or month.
 

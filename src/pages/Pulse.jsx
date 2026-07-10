@@ -73,7 +73,7 @@ export default function Pulse() {
 
       <main className="pulse-main">
         <div className="pulse-head">
-          <h1>Pulse</h1>
+          <h1>PulseAI</h1>
           <DateRangePicker value={range} onChange={setRange} />
         </div>
 

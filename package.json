@@ -1,7 +1,7 @@
 {
-  "name": "leadly",
+  "name": "leadly-pulse",
   "version": "1.0.0",
-  "description": "Leadly - self-serve Meta + Google Ads reporting dashboard SaaS",
+  "description": "Leadly Pulse - self-serve Meta + Google Ads reporting dashboard SaaS",
   "scripts": {
     "dev": "netlify dev",
     "build": "vite build",
