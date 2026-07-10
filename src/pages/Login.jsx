@@ -52,7 +52,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card card">
-        <h1>{isLogin ? 'Log in to AdPulse' : 'Create your AdPulse account'}</h1>
+        <h1>{isLogin ? 'Log in to Leadly' : 'Create your Leadly account'}</h1>
 
         <form onSubmit={handleSubmit}>
           <label htmlFor="email">Email</label>

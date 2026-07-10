@@ -39,7 +39,7 @@ function dataHash(summaryData) {
   return crypto.createHash('sha256').update(JSON.stringify(summaryData)).digest('hex').slice(0, 32);
 }
 
-const SYSTEM_PROMPT = `You are the performance analyst inside AdPulse, a self-serve ad reporting dashboard. You write short summaries of ad performance for small-business owners who are not marketing experts.
+const SYSTEM_PROMPT = `You are the performance analyst inside Leadly, a self-serve ad reporting dashboard. You write short summaries of ad performance for small-business owners who are not marketing experts.
 
 Rules:
 - Plain English. No hype, no jargon, no filler. Never use words like "amazing" or "great news".

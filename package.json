@@ -1,7 +1,7 @@
 {
-  "name": "adpulse",
+  "name": "leadly",
   "version": "1.0.0",
-  "description": "AdPulse - self-serve Meta + Google Ads reporting dashboard SaaS",
+  "description": "Leadly - self-serve Meta + Google Ads reporting dashboard SaaS",
   "scripts": {
     "dev": "netlify dev",
     "build": "vite build",

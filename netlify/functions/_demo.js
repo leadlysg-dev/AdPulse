@@ -184,7 +184,7 @@ function demoSeo(range, custom) {
       row('cost per lead calculator', 0.09, 8.1),
       row('google ads dashboard for small business', 0.07, 9.4),
       row('facebook ads reporting', 0.06, 11.2),
-      row('adpulse', 0.05, 1.1),
+      row('leadly', 0.05, 1.1),
       row('marketing report template', 0.04, 14.6),
       row('roas tracker', 0.03, 12.9)
     ],

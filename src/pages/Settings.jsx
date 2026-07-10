@@ -274,7 +274,7 @@ export default function Settings() {
                     await api.disconnectProvider('meta');
                     await loadStatus();
                   }}
-                  disconnectNote="Disconnecting Meta removes its stored access, your selected ad account, and your tracked metrics and goals. Your AdPulse account and history of other settings stay. You can reconnect any time."
+                  disconnectNote="Disconnecting Meta removes its stored access, your selected ad account, and your tracked metrics and goals. Your Leadly account and history of other settings stay. You can reconnect any time."
                 />
                 <div className="settings-divider" role="separator" />
                 <ConnectionRow
@@ -297,7 +297,7 @@ export default function Settings() {
                   <div className="settings-row">
                     <div className="settings-row-copy">
                       <span className="settings-row-label">Meta ad account</span>
-                      <span className="settings-hint">Which ad account AdPulse reports on.</span>
+                      <span className="settings-hint">Which ad account Leadly reports on.</span>
                     </div>
                     <Link className="btn btn-secondary" to="/select-account.html?provider=meta">
                       Change

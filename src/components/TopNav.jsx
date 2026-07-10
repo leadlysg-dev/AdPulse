@@ -27,7 +27,7 @@ export default function TopNav({ email }) {
               strokeLinejoin="round"
             />
           </svg>
-          <span>AdPulse</span>
+          <span>Leadly</span>
         </div>
         <nav className="top-nav-tabs" aria-label="Main">
           {TABS.map((t) => (
