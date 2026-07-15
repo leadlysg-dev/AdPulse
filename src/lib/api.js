@@ -164,6 +164,48 @@ export const api = {
       body: JSON.stringify({ messages })
     }),
 
+  studioInit: () => request('/.netlify/functions/studio-init'),
+
+  studioBalance: () => request('/.netlify/functions/studio-balance'),
+
+  studioJobs: (project) =>
+    request(`/.netlify/functions/studio-jobs?project=${encodeURIComponent(project || '')}`),
+
+  studioJob: (id) => request(`/.netlify/functions/studio-job?id=${encodeURIComponent(id)}`),
+
+  studioCreate: (body) =>
+    request('/.netlify/functions/studio-create', { method: 'POST', body: JSON.stringify(body) }),
+
+  studioRetry: (jobId, placement) =>
+    request('/.netlify/functions/studio-retry', {
+      method: 'POST',
+      body: JSON.stringify({ jobId, placement })
+    }),
+
+  studioEdit: (body) =>
+    request('/.netlify/functions/studio-edit', { method: 'POST', body: JSON.stringify(body) }),
+
+  studioChain: (id) => request(`/.netlify/functions/studio-chain?id=${encodeURIComponent(id)}`),
+
+  studioAnimate: (body) =>
+    request('/.netlify/functions/studio-animate', { method: 'POST', body: JSON.stringify(body) }),
+
+  studioMotion: (id) => request(`/.netlify/functions/studio-motion?id=${encodeURIComponent(id)}`),
+
+  studioExpand: (body) =>
+    request('/.netlify/functions/studio-expand', { method: 'POST', body: JSON.stringify(body) }),
+
+  studioExpandEdit: (body) =>
+    request('/.netlify/functions/studio-expand-edit', { method: 'POST', body: JSON.stringify(body) }),
+
+  studioUpload: (files, target) =>
+    request('/.netlify/functions/studio-upload', {
+      method: 'POST',
+      body: JSON.stringify({ files, target })
+    }),
+
+  studioLibrary: () => request('/.netlify/functions/studio-library'),
+
   listAlerts: () => request('/.netlify/functions/list-alerts'),
 
   updateAlert: (id, enabled) =>

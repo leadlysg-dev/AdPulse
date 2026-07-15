@@ -242,6 +242,51 @@ async function listChangeLog(email, limit = 100) {
   }));
 }
 
+// --- Leadly Studio records (jobs, chains, motion runs, uploads, docs, brands) ---
+// One generic JSON-document table (see migration 010): every Studio concept
+// is a small blob read back whole, by id or newest-first, always per-user.
+
+async function getStudioRecord(email, kind, id) {
+  const userId = await userIdFor(email);
+  const { data, error } = await db()
+    .from('studio_records')
+    .select('data')
+    .eq('user_id', userId)
+    .eq('kind', kind)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) fail(error, `loading studio ${kind}`);
+  return data ? data.data : null;
+}
+
+async function putStudioRecord(email, kind, id, record) {
+  const userId = await userIdFor(email);
+  const { error } = await db()
+    .from('studio_records')
+    .upsert(
+      { user_id: userId, kind, id, data: record, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,kind,id' }
+    );
+  if (error) fail(error, `saving studio ${kind}`);
+}
+
+// opts.idPrefix narrows jobs to one project (job ids start with the project
+// slug); opts.limit caps the result. Newest first.
+async function listStudioRecords(email, kind, opts = {}) {
+  const userId = await userIdFor(email);
+  let query = db()
+    .from('studio_records')
+    .select('id, data')
+    .eq('user_id', userId)
+    .eq('kind', kind)
+    .order('updated_at', { ascending: false })
+    .limit(opts.limit || 100);
+  if (opts.idPrefix) query = query.like('id', `${opts.idPrefix}%`);
+  const { data, error } = await query;
+  if (error) fail(error, `listing studio ${kind}s`);
+  return (data || []).map((r) => r.data);
+}
+
 // --- Alert rules (created by the AI assistant) ---
 
 async function userIdFor(email) {
@@ -458,6 +503,9 @@ module.exports = {
   clearAiInsightCache,
   createChangeLog,
   listChangeLog,
+  getStudioRecord,
+  putStudioRecord,
+  listStudioRecords,
   listAlertRules,
   createAlertRule,
   updateAlertRule,

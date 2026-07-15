@@ -93,6 +93,43 @@ async function clearAiInsightCache(email) {
   });
 }
 
+// --- Leadly Studio records: one blob per document, in their own store ---
+// Keyed <email>/<kind>/<id>. Studio ids embed an ISO timestamp (jobs are
+// "<project>--<stamp>", chains "chain--<stamp>", ...) so a reverse key sort
+// is newest-first without reading every blob's contents.
+
+function studioStore() {
+  const siteID = process.env.NETLIFY_SITE_ID;
+  const token = process.env.NETLIFY_BLOBS_TOKEN;
+  if (siteID && token) {
+    return getStore({ name: 'adpulse-studio', siteID, token });
+  }
+  return getStore('adpulse-studio');
+}
+
+const studioKey = (email, kind, id) => `${email.toLowerCase()}/${kind}/${id}`;
+
+async function getStudioRecord(email, kind, id) {
+  return await studioStore().get(studioKey(email, kind, id), { type: 'json' });
+}
+
+async function putStudioRecord(email, kind, id, record) {
+  await studioStore().setJSON(studioKey(email, kind, id), record);
+}
+
+async function listStudioRecords(email, kind, opts = {}) {
+  const store = studioStore();
+  const prefix = `${email.toLowerCase()}/${kind}/${opts.idPrefix || ''}`;
+  const { blobs } = await store.list({ prefix });
+  const keys = (blobs || [])
+    .map((b) => b.key)
+    .sort()
+    .reverse()
+    .slice(0, opts.limit || 100);
+  const records = await Promise.all(keys.map((k) => store.get(k, { type: 'json' })));
+  return records.filter(Boolean);
+}
+
 // --- Alert rules: stored as an array on the user blob ---
 
 async function withUser(email, mutate) {
@@ -149,6 +186,9 @@ module.exports = {
   clearAiInsightCache,
   createChangeLog,
   listChangeLog,
+  getStudioRecord,
+  putStudioRecord,
+  listStudioRecords,
   listAlertRules,
   createAlertRule,
   updateAlertRule,

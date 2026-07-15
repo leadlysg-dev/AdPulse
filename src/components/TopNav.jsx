@@ -7,6 +7,7 @@ const TABS = [
   { to: '/reporting.html', label: 'Reporting' },
   { to: '/manage.html', label: 'Manage' },
   { to: '/creative.html', label: 'Creative' },
+  { to: '/studio.html', label: 'Leadly Studio' },
   { to: '/seo.html', label: 'Local SEO' },
   { to: '/settings.html', label: 'Settings' }
 ];
