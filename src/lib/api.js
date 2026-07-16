@@ -164,6 +164,14 @@ export const api = {
       body: JSON.stringify({ messages })
     }),
 
+  trackedMetrics: () => request('/.netlify/functions/tracked-metrics'),
+
+  trackedMetricsSave: (metrics) =>
+    request('/.netlify/functions/tracked-metrics', { method: 'POST', body: JSON.stringify({ metrics }) }),
+
+  pulseAnalytics: (payload) =>
+    request('/.netlify/functions/pulse-analytics', { method: 'POST', body: JSON.stringify(payload) }),
+
   pulseChat: (payload) =>
     request('/.netlify/functions/pulse-chat', { method: 'POST', body: JSON.stringify(payload) }),
 

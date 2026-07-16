@@ -8,12 +8,6 @@ import { api } from '../lib/api';
 const ShellContext = createContext(null);
 export const useShell = () => useContext(ShellContext);
 
-const RANGES = [
-  { id: 'last_7d', label: 'Last 7 days' },
-  { id: 'last_30d', label: 'Last 30 days' },
-  { id: 'last_90d', label: 'Last 90 days' }
-];
-
 const ICONS = {
   pulse: (
     <svg width="17" height="17" viewBox="0 0 16 16" fill="none">
@@ -79,7 +73,6 @@ export default function Shell({ title, children }) {
   const [redirecting, setRedirecting] = useState(false);
   const [ws, setWs] = useState(null); // { active, workspaces }
   const [wsOpen, setWsOpen] = useState(false);
-  const [rangeIdx, setRangeIdx] = useState(0);
   const [toastMsg, setToastMsg] = useState(null);
   const toastTimer = useRef(null);
 
@@ -128,7 +121,6 @@ export default function Shell({ title, children }) {
   const showSwitcher = role === 'owner' && workspaces.length > 1;
   // billing-exempt workspaces never see trial/paywall copy
   const planLine = ws?.active?.billingExempt ? 'Pro · Agency' : 'Free plan';
-  const range = RANGES[rangeIdx];
 
   const switchWorkspace = async (id) => {
     if (id === ws?.active?.id) return setWsOpen(false);
@@ -144,8 +136,6 @@ export default function Shell({ title, children }) {
     status,
     role,
     workspace: ws?.active || null,
-    range: range.id,
-    rangeLabel: range.label,
     toast
   };
 
@@ -213,13 +203,6 @@ export default function Shell({ title, children }) {
               </span>
             </div>
             <div className="topbar-right">
-              <button type="button" className="sbtn sbtn-ghost sbtn-sm" onClick={() => setRangeIdx((i) => (i + 1) % RANGES.length)}>
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                {range.label}
-              </button>
               <button type="button" className="sbtn sbtn-primary sbtn-sm" onClick={() => toast('Shareable report links are coming soon.')}>
                 Share report
               </button>

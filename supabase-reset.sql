@@ -38,10 +38,11 @@ create table public.users (
 
 -- ── 3 · Workspaces (multi-tenant, invite-only) ─────────────────────────
 create table public.workspaces (
-  id             uuid primary key default gen_random_uuid(),
-  name           text not null,
-  billing_exempt boolean not null default false,
-  created_at     timestamptz not null default now()
+  id              uuid primary key default gen_random_uuid(),
+  name            text not null,
+  billing_exempt  boolean not null default false,
+  tracked_metrics jsonb,                        -- ids the Pulse tab keeps an eye on
+  created_at      timestamptz not null default now()
 );
 
 create table public.workspace_members (

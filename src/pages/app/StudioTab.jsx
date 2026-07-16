@@ -11,7 +11,7 @@ const GALLERY = [
   { t: 't4', fmt: 'Image · 1:1', name: 'Void deck — v3' },
   { t: 't5', fmt: 'Video · 9:16', name: 'Testimonial cutdown' },
   { t: 't6', fmt: 'Image · 4:5', name: 'Family static B' },
-  { t: 't3', fmt: 'Ad set · 3 sizes', name: 'Q3 promo pack' }
+  { t: 't3', fmt: 'Ad set', name: 'Promo pack' }
 ];
 
 function Seg({ options, value, onChange, label }) {
@@ -77,7 +77,7 @@ export default function StudioTab() {
               style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}
               onClick={() => studioService.generate({ prompt, format, aspect }).catch(() => {})}
             >
-              ✦ Generate 4 variations
+              ✦ Generate variations
             </button>
             <p className="cache-note" style={{ marginTop: 10, textAlign: 'center' }}>
               Pulse writes the final prompt for you — tap any result to refine it in chat.
