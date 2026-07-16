@@ -14,6 +14,7 @@ import SelectMetrics from './pages/SelectMetrics';
 import Upgrade from './pages/Upgrade';
 import Manage from './pages/Manage';
 import Studio from './pages/Studio';
+import Invite from './pages/Invite';
 
 // The marketing site is now the public front door, so "/" just routes into
 // the app: logged-in visitors go to Pulse, everyone else to login.
@@ -53,6 +54,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             to these exact hardcoded paths - changing them would require
             touching backend code, which is out of scope for this rebuild. */}
         <Route path="/login.html" element={<Login />} />
+        <Route path="/invite.html" element={<Invite />} />
         <Route path="/pulse.html" element={<Pulse />} />
         <Route path="/reporting.html" element={<Reporting />} />
         <Route path="/manage.html" element={<Manage />} />

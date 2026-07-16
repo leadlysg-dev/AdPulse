@@ -242,6 +242,139 @@ async function listChangeLog(email, limit = 100) {
   }));
 }
 
+// --- Workspaces (multi-tenant, invite-only) ---
+// A workspace owns the ad connections; members are 'owner' (agency) or
+// 'client' (invited). Clients read their workspace's data through the
+// owner's connections and never OAuth themselves.
+
+function assembleMembership(row) {
+  return {
+    id: row.workspace_id,
+    role: row.role,
+    name: row.workspaces ? row.workspaces.name : null,
+    billingExempt: row.workspaces ? row.workspaces.billing_exempt : false
+  };
+}
+
+async function listMemberships(email) {
+  const userId = await userIdFor(email);
+  const { data, error } = await db()
+    .from('workspace_members')
+    .select('workspace_id, role, workspaces ( name, billing_exempt )')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  if (error) fail(error, 'loading workspaces');
+  return (data || []).map(assembleMembership);
+}
+
+// The first owner of a workspace is the account whose OAuth connections the
+// workspace's clients read through.
+async function workspaceOwnerEmail(workspaceId) {
+  const { data, error } = await db()
+    .from('workspace_members')
+    .select('users ( email )')
+    .eq('workspace_id', workspaceId)
+    .eq('role', 'owner')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) fail(error, 'looking up the workspace owner');
+  return data && data.users ? data.users.email : null;
+}
+
+async function createWorkspaceInvite(email, workspaceId) {
+  const userId = await userIdFor(email);
+  const { data: member, error: mErr } = await db()
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (mErr) fail(mErr, 'checking workspace role');
+  if (!member || member.role !== 'owner') throw new Error('Only a workspace owner can create invite links.');
+  const token = require('crypto').randomBytes(24).toString('base64url');
+  const { error } = await db()
+    .from('workspace_invites')
+    .insert({ token, workspace_id: workspaceId, created_by: userId });
+  if (error) fail(error, 'creating the invite');
+  return token;
+}
+
+// Single use: the row is claimed with a guarded update, so two concurrent
+// accepts can't both succeed.
+async function acceptWorkspaceInvite(token, email, password) {
+  const { data: invite, error } = await db()
+    .from('workspace_invites')
+    .select('workspace_id, used_by, expires_at')
+    .eq('token', token)
+    .maybeSingle();
+  if (error) fail(error, 'reading the invite');
+  if (!invite) throw new Error('That invite link is not valid.');
+  if (invite.used_by) throw new Error('That invite link has already been used.');
+  if (new Date(invite.expires_at) < new Date()) throw new Error('That invite link has expired.');
+
+  let user = await getUser(email);
+  let created = false;
+  if (!user) {
+    user = await createUser(email, password);
+    created = true;
+  }
+
+  const { data: claimed, error: claimErr } = await db()
+    .from('workspace_invites')
+    .update({ used_by: user.id, used_at: new Date().toISOString() })
+    .eq('token', token)
+    .is('used_by', null)
+    .select('workspace_id')
+    .maybeSingle();
+  if (claimErr) fail(claimErr, 'claiming the invite');
+  if (!claimed) throw new Error('That invite link has already been used.');
+
+  const { error: memberErr } = await db()
+    .from('workspace_members')
+    .upsert(
+      { workspace_id: invite.workspace_id, user_id: user.id, role: 'client' },
+      { onConflict: 'workspace_id,user_id', ignoreDuplicates: true }
+    );
+  if (memberErr) fail(memberErr, 'adding you to the workspace');
+  return { workspaceId: invite.workspace_id, created };
+}
+
+async function createChangeRequest(email, workspaceId, payload) {
+  const userId = await userIdFor(email);
+  const { error } = await db().from('change_requests').insert({
+    workspace_id: workspaceId,
+    requested_by: userId,
+    request: String(payload.request || '').slice(0, 2000),
+    entity_type: payload.entityType || null,
+    entity_id: payload.entityId || null,
+    action: payload.action || null,
+    value: payload.value != null ? String(payload.value) : null
+  });
+  if (error) fail(error, 'saving the change request');
+}
+
+async function listChangeRequests(workspaceId, limit = 100) {
+  const { data, error } = await db()
+    .from('change_requests')
+    .select('id, request, entity_type, entity_id, action, value, status, created_at, users:requested_by ( email )')
+    .eq('workspace_id', workspaceId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) fail(error, 'loading change requests');
+  return (data || []).map((r) => ({
+    id: r.id,
+    request: r.request,
+    entityType: r.entity_type,
+    entityId: r.entity_id,
+    action: r.action,
+    value: r.value,
+    status: r.status,
+    requestedBy: r.users ? r.users.email : null,
+    createdAt: r.created_at
+  }));
+}
+
 // --- Leadly Studio records (jobs, chains, motion runs, uploads, docs, brands) ---
 // One generic JSON-document table (see migration 010): every Studio concept
 // is a small blob read back whole, by id or newest-first, always per-user.
@@ -506,6 +639,12 @@ module.exports = {
   getStudioRecord,
   putStudioRecord,
   listStudioRecords,
+  listMemberships,
+  workspaceOwnerEmail,
+  createWorkspaceInvite,
+  acceptWorkspaceInvite,
+  createChangeRequest,
+  listChangeRequests,
   listAlertRules,
   createAlertRule,
   updateAlertRule,

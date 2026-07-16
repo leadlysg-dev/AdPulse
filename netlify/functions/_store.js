@@ -45,6 +45,41 @@ function hasSetPassword(user) {
   return user.passwordSetAt !== null;
 }
 
+// --- Workspace resolution (multi-tenant) ---
+// The active workspace rides in its own cookie; it must always be validated
+// against the user's memberships, so a stale or forged cookie can never
+// reach another tenant's data. No memberships (migration 011 not run yet)
+// degrades to the legacy single-tenant behaviour.
+function workspaceCookie(id) {
+  return `leadly_ws=${encodeURIComponent(id)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`;
+}
+
+async function getWorkspaceFromRequest(headers, email) {
+  let memberships = [];
+  try {
+    memberships = await backend.listMemberships(email);
+  } catch (err) {
+    console.error(`[store] memberships unavailable (run migration 011?): ${err.message}`);
+  }
+  if (!memberships.length) {
+    return { id: null, role: 'owner', name: 'Leadly (Agency)', billingExempt: false, memberships: [] };
+  }
+  const match = ((headers && headers.cookie) || '').match(/leadly_ws=([^;]+)/);
+  const wanted = match ? decodeURIComponent(match[1]) : null;
+  const active = memberships.find((m) => m.id === wanted) || memberships[0];
+  return { ...active, memberships };
+}
+
+// The user object whose ad connections this request should read: clients see
+// their workspace through the owner's connections and never OAuth themselves.
+async function getDataUser(email, workspace) {
+  if (workspace && workspace.role === 'client' && workspace.id) {
+    const ownerEmail = await backend.workspaceOwnerEmail(workspace.id);
+    if (ownerEmail && ownerEmail !== email) return backend.getUser(ownerEmail);
+  }
+  return backend.getUser(email);
+}
+
 module.exports = {
   getUser: backend.getUser,
   createUser: backend.createUser,
@@ -63,6 +98,15 @@ module.exports = {
   createAlertRule: backend.createAlertRule,
   updateAlertRule: backend.updateAlertRule,
   deleteAlertRule: backend.deleteAlertRule,
+  listMemberships: backend.listMemberships,
+  workspaceOwnerEmail: backend.workspaceOwnerEmail,
+  createWorkspaceInvite: backend.createWorkspaceInvite,
+  acceptWorkspaceInvite: backend.acceptWorkspaceInvite,
+  createChangeRequest: backend.createChangeRequest,
+  listChangeRequests: backend.listChangeRequests,
+  getWorkspaceFromRequest,
+  getDataUser,
+  workspaceCookie,
   hasSetPassword,
   verifyPassword,
   createSessionCookie,

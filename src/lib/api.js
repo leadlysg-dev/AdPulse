@@ -164,6 +164,34 @@ export const api = {
       body: JSON.stringify({ messages })
     }),
 
+  workspacesList: () => request('/.netlify/functions/workspaces-list'),
+
+  workspaceSelect: (workspaceId) =>
+    request('/.netlify/functions/workspace-select', {
+      method: 'POST',
+      body: JSON.stringify({ workspaceId })
+    }),
+
+  inviteCreate: (workspaceId) =>
+    request('/.netlify/functions/invite-create', {
+      method: 'POST',
+      body: JSON.stringify({ workspaceId })
+    }),
+
+  inviteAccept: (token, email, password) =>
+    request('/.netlify/functions/invite-accept', {
+      method: 'POST',
+      body: JSON.stringify({ token, email, password })
+    }),
+
+  changeRequestCreate: (payload) =>
+    request('/.netlify/functions/change-request', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+
+  changeRequestList: () => request('/.netlify/functions/change-request'),
+
   studioInit: () => request('/.netlify/functions/studio-init'),
 
   studioBalance: () => request('/.netlify/functions/studio-balance'),

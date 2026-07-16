@@ -11,10 +11,9 @@
 // flow can be diagnosed from either side. Secrets, codes, and tokens are
 // never logged - only statuses, error names, and the redirect URI (which
 // is public).
-const crypto = require('crypto');
 const fetch = require('node-fetch');
 const jwt = require('jsonwebtoken');
-const { getUser, createUser, createSessionCookie } = require('./_store');
+const { getUser, createSessionCookie } = require('./_store');
 const { loginRedirectUri } = require('./login-google');
 
 // Friendly failures land back on the login page with a readable message
@@ -95,13 +94,11 @@ exports.handler = async (event) => {
 
     let user = await getUser(email);
     if (!user) {
-      // A normal user row with an unguessable placeholder password - they
-      // sign in with Google; email/password correctly rejects until they
-      // set a real one from Settings (passwordSet: false is what makes
-      // Settings offer "Set password" instead of "Change password").
-      user = await createUser(email, crypto.randomBytes(32).toString('hex'), {
-        passwordSet: false
-      });
+      // Invite-only: Google sign-in authenticates existing accounts but must
+      // not mint new ones, or it would be a public-signup backdoor. New
+      // people come in through a workspace invite link.
+      console.error(`[login-google-callback] no account for a verified Google email - invite required`);
+      return backToLogin('google-no-account');
     }
 
     const destination =

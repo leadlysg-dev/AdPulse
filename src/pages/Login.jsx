@@ -13,18 +13,18 @@ const GOOGLE_ERRORS = {
     "Google didn't accept the sign-in. Please try again in a moment, or use your email and password.",
   'google-server-error':
     'Something went wrong on our side finishing the Google sign-in. Please try again, or use your email and password.',
-  'google-failed': "Something went wrong signing in with Google. Please try again, or use your email and password."
+  'google-failed': "Something went wrong signing in with Google. Please try again, or use your email and password.",
+  'google-no-account':
+    "There's no Leadly Pulse account for that Google email yet. Leadly Pulse is invite-only — ask your agency contact for an invite link."
 };
 
 export default function Login() {
   const [params] = useSearchParams();
-  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(() => GOOGLE_ERRORS[params.get('error')] || '');
   const [submitting, setSubmitting] = useState(false);
 
-  const isLogin = mode === 'login';
   const next = params.get('next');
   const googleHref = `/.netlify/functions/login-google${next ? `?next=${encodeURIComponent(next)}` : ''}`;
 
@@ -33,11 +33,7 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      if (isLogin) {
-        await api.login(email, password);
-      } else {
-        await api.signup(email, password);
-      }
+      await api.login(email, password);
 
       const next = params.get('next');
       if (next === 'connect-meta') window.location.href = '/.netlify/functions/auth-meta';
@@ -78,7 +74,7 @@ export default function Login() {
         </section>
 
         <div className="login-card card">
-          <h1>{isLogin ? 'Log in to Leadly Pulse' : 'Create your Leadly Pulse account'}</h1>
+          <h1>Log in to Leadly Pulse</h1>
 
           <form onSubmit={handleSubmit}>
           <label htmlFor="email">Email</label>
@@ -97,13 +93,13 @@ export default function Login() {
             type="password"
             required
             minLength={8}
-            autoComplete={isLogin ? 'current-password' : 'new-password'}
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
 
           <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
-            {submitting ? 'Please wait…' : isLogin ? 'Log in' : 'Create account'}
+            {submitting ? 'Please wait…' : 'Log in'}
           </button>
         </form>
 
@@ -123,19 +119,9 @@ export default function Login() {
           Sign in with Google
         </a>
 
-        <p className="login-toggle">
-          {isLogin ? "New here? " : 'Already have an account? '}
-          <button
-            type="button"
-            className="login-toggle-link"
-            onClick={() => {
-              setMode(isLogin ? 'signup' : 'login');
-              setError('');
-            }}
-          >
-            {isLogin ? 'Create an account' : 'Log in'}
-          </button>
-        </p>
+        {/* Invite-only: no public signup. Accounts are created through a
+            workspace invite link from the agency. */}
+        <p className="login-toggle">New here? Leadly Pulse is invite-only — ask your agency contact for an invite link.</p>
         </div>
       </div>
     </div>

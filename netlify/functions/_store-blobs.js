@@ -130,6 +130,34 @@ async function listStudioRecords(email, kind, opts = {}) {
   return records.filter(Boolean);
 }
 
+// --- Workspaces: the Blobs fallback is single-tenant ---
+// Every user is the owner of one implicit agency workspace; invites and
+// client roles need the relational backend.
+
+async function listMemberships() {
+  return [{ id: 'agency', role: 'owner', name: 'Leadly (Agency)', billingExempt: true }];
+}
+
+async function workspaceOwnerEmail() {
+  return null; // single-tenant: the caller falls back to the session user
+}
+
+async function createWorkspaceInvite() {
+  throw new Error('Workspaces and invites require the Supabase backend (unset STORAGE_BACKEND=blobs).');
+}
+
+async function acceptWorkspaceInvite() {
+  throw new Error('Workspaces and invites require the Supabase backend (unset STORAGE_BACKEND=blobs).');
+}
+
+async function createChangeRequest() {
+  throw new Error('Change requests require the Supabase backend (unset STORAGE_BACKEND=blobs).');
+}
+
+async function listChangeRequests() {
+  return [];
+}
+
 // --- Alert rules: stored as an array on the user blob ---
 
 async function withUser(email, mutate) {
@@ -189,6 +217,12 @@ module.exports = {
   getStudioRecord,
   putStudioRecord,
   listStudioRecords,
+  listMemberships,
+  workspaceOwnerEmail,
+  createWorkspaceInvite,
+  acceptWorkspaceInvite,
+  createChangeRequest,
+  listChangeRequests,
   listAlertRules,
   createAlertRule,
   updateAlertRule,
