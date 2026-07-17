@@ -244,7 +244,7 @@ declare uid uuid; ws uuid;
 begin
   insert into public.users (email, password_hash, password_set_at)
   values (
-    'kennethtay1993@gmail.com',
+    'leadlysg@gmail.com',
     '00000000000000000000000000000000:' || repeat('0', 128),
     null
   )

@@ -5,7 +5,7 @@
 -- workspace" visits), audit_log, an 'agency' member role for Leadly
 -- teammates inside client workspaces, invite links that carry their
 -- intended role and expire after 7 days, and a per-workspace Managed-mode
--- flag. Bootstraps kennethtay1993@gmail.com as the first platform admin.
+-- flag. Bootstraps leadlysg@gmail.com as the platform-admin agency account.
 
 -- Platform-level roles, separate from per-workspace membership roles.
 create table if not exists public.user_roles (
@@ -49,10 +49,27 @@ alter table public.workspace_invites alter column expires_at set default now() +
 -- Managed mode: Leadly runs the campaigns; clients get read-mostly controls.
 alter table public.workspaces add column if not exists managed boolean not null default true;
 
--- Bootstrap the first platform admin.
-insert into public.user_roles (user_id, role)
-  select id, 'platform_admin' from public.users where email = 'kennethtay1993@gmail.com'
-  on conflict do nothing;
+-- Bootstrap the platform-admin agency account. The account is created if
+-- it doesn't exist yet (unusable password hash - sign in with Google, then
+-- set a real password from Settings), granted platform_admin, and added to
+-- the agency workspace as an owner.
+do $$
+declare uid uuid; ws uuid;
+begin
+  select id into uid from public.users where email = 'leadlysg@gmail.com';
+  if uid is null then
+    insert into public.users (email, password_hash, password_set_at)
+    values ('leadlysg@gmail.com', '00000000000000000000000000000000:' || repeat('0', 128), null)
+    returning id into uid;
+  end if;
+  insert into public.user_roles (user_id, role) values (uid, 'platform_admin')
+    on conflict do nothing;
+  select id into ws from public.workspaces where name = 'Leadly (Agency)' limit 1;
+  if ws is not null then
+    insert into public.workspace_members (workspace_id, user_id, role) values (ws, uid, 'owner')
+      on conflict do nothing;
+  end if;
+end $$;
 
 -- RLS: deny-all to the anon key (the app talks through the service key).
 alter table public.user_roles     enable row level security;
