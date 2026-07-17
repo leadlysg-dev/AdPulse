@@ -325,26 +325,28 @@ export default function CampaignsTab() {
 
   return (
     <>
-      <div className="toolbar" style={{ marginBottom: 10 }}>
-        <div className="seg" role="group" aria-label="Platform">
-          {[['meta', 'Meta'], ['google', 'Google']].map(([id, label]) => (
-            <button key={id} type="button" className={platform === id ? 'on' : ''} onClick={() => { userPicked.current = true; setPlatform(id); }}>{label}</button>
-          ))}
+      <div className="controls-sticky">
+        <div className="toolbar">
+          <div className="seg" role="group" aria-label="Platform">
+            {[['meta', 'Meta'], ['google', 'Google']].map(([id, label]) => (
+              <button key={id} type="button" className={platform === id ? 'on' : ''} onClick={() => { userPicked.current = true; setPlatform(id); }}>{label}</button>
+            ))}
+          </div>
+          <TableControls
+            search={search}
+            onSearch={setSearch}
+            filters={filters}
+            onFilters={setFilters}
+            fields={filterFields}
+            placeholder="Search campaigns…"
+          />
+          <button type="button" className="sbtn sbtn-primary" style={{ marginLeft: 'auto' }} onClick={createNew}>
+            + New campaign
+          </button>
         </div>
-        <TableControls
-          search={search}
-          onSearch={setSearch}
-          filters={filters}
-          onFilters={setFilters}
-          fields={filterFields}
-          placeholder="Search campaigns…"
-        />
-        <button type="button" className="sbtn sbtn-primary" style={{ marginLeft: 'auto' }} onClick={createNew}>
-          + New campaign
-        </button>
-      </div>
 
-      <DateSelector value={range} onChange={setRange} />
+        <DateSelector value={range} onChange={setRange} />
+      </div>
 
       {selected.size > 0 && !locked && (
         <div className="bulkbar">

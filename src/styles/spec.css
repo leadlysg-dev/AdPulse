@@ -299,6 +299,17 @@ body::before,body::after{content:none}
   .mobile-nav{display:flex}
 }
 
+/* ── Sticky control rows (Pulse + Campaigns) ────────
+   The platform/search/filter toolbar and the date selector pin under the
+   60px topbar so the controls stay reachable while long tables scroll.
+   Negative margins let the frosted background run edge-to-edge across the
+   content column. */
+.controls-sticky{position:sticky;top:60px;z-index:150;background:rgba(246,247,249,.92);backdrop-filter:blur(8px);margin:0 -32px 14px;padding:12px 32px 2px;border-bottom:1px solid var(--line)}
+.tab-pane > .controls-sticky:first-child{margin-top:-26px;padding-top:16px}
+.controls-sticky .toolbar{margin-bottom:10px}
+.controls-sticky .date-selector{margin-bottom:12px}
+@media (max-width:760px){.controls-sticky{margin:0 -16px 12px;padding:10px 16px 2px}.tab-pane > .controls-sticky:first-child{margin-top:-18px}}
+
 /* ── Date selector + two-month calendar ───────────── */
 .date-selector{position:relative;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
 .sbtn.on-dark{background:var(--stage);color:#fff;border-color:var(--stage)}

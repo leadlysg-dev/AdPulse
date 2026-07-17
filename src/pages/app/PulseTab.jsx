@@ -925,27 +925,29 @@ export default function PulseTab() {
     <>
       <PulseBar context={chatContext} />
 
-      <div className="toolbar" style={{ marginBottom: 10 }}>
-        <div className="seg" role="group" aria-label="Platform">
-          {[['all', 'All platforms'], ['meta', 'Meta'], ['google', 'Google']].map(([id, label]) => (
-            <button key={id} type="button" className={platform === id ? 'on' : ''} onClick={() => setPlatform(id)}>
-              {label}
-            </button>
-          ))}
+      <div className="controls-sticky">
+        <div className="toolbar">
+          <div className="seg" role="group" aria-label="Platform">
+            {[['all', 'All platforms'], ['meta', 'Meta'], ['google', 'Google']].map(([id, label]) => (
+              <button key={id} type="button" className={platform === id ? 'on' : ''} onClick={() => setPlatform(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <DateSelector
-        value={range}
-        onChange={setRange}
-        compare={compare}
-        onCompare={setCompare}
-        extras={
-          <button type="button" className="sbtn sbtn-primary sbtn-sm" onClick={share}>
-            Share report
-          </button>
-        }
-      />
+        <DateSelector
+          value={range}
+          onChange={setRange}
+          compare={compare}
+          onCompare={setCompare}
+          extras={
+            <button type="button" className="sbtn sbtn-primary sbtn-sm" onClick={share}>
+              Share report
+            </button>
+          }
+        />
+      </div>
 
       {report && (
         <p className="section-sub" style={{ margin: '-6px 0 12px' }}>
