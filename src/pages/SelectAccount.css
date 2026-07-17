@@ -66,3 +66,9 @@
   height: 52px;
   border-radius: var(--r-md);
 }
+
+.select-account-current {
+  color: var(--accent, #2447f5);
+  font-weight: 700;
+  font-size: 0.85em;
+}

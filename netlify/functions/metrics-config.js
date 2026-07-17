@@ -31,13 +31,47 @@ async function syncConnections(email, config) {
   if (changed) await saveUser(user);
 }
 
+// Build a master config from a connection's legacy selected_metrics rows:
+// every selection becomes a tracked conversion, the first per platform
+// becomes that platform's mapped result, named "Enquiries" until renamed.
+async function migrateLegacySelections(email, workspaceId) {
+  const user = await getUser(email);
+  const legacy = [];
+  for (const platform of ['meta', 'google']) {
+    const conn = user && user.accounts && user.accounts[platform];
+    for (const m of (conn && conn.selectedMetrics) || []) {
+      legacy.push({ id: String(m.id), label: String(m.label || m.id), platform });
+    }
+  }
+  if (!legacy.length) return null;
+  const first = (platform) => legacy.find((c) => c.platform === platform);
+  const config = {
+    extras: [],
+    conversions: legacy.slice(0, 20),
+    primaryResult: {
+      name: 'Enquiries',
+      source: 'platform_event',
+      meta: first('meta') ? { event: first('meta').id, label: first('meta').label } : null,
+      google: first('google') ? { event: first('google').id, label: first('google').label } : null
+    }
+  };
+  await saveMetricsConfig(workspaceId, config);
+  return config;
+}
+
 exports.handler = async (event) => {
   const email = getEmailFromRequest(event.headers);
   if (!email) return { statusCode: 401, body: 'Not logged in.' };
   try {
     const workspace = await getWorkspaceFromRequest(event.headers, email);
     if (event.httpMethod === 'GET') {
-      const config = workspace.id ? await getMetricsConfig(workspace.id) : null;
+      let config = workspace.id ? await getMetricsConfig(workspace.id) : null;
+      if (!config && workspace.id) {
+        // One-time migration: selections that exist only in the legacy
+        // per-platform system become the master config, so nobody is forced
+        // back through onboarding just because the old edit screens went.
+        config = await migrateLegacySelections(email, workspace.id);
+      }
       return json(200, { config: config || null });
     }
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed.' };

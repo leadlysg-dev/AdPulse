@@ -13,7 +13,7 @@ exports.handler = async (event) => {
     response_type: 'code',
     access_type: 'offline',
     prompt: 'consent',
-    scope: 'https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/webmasters.readonly',
+    scope: 'https://www.googleapis.com/auth/adwords',
     state: email
   });
 

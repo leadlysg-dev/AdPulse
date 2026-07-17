@@ -14,12 +14,19 @@ export default function SelectAccount() {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  const [currentId, setCurrentId] = useState(null);
+
   async function load() {
     setError(null);
     setAccounts(null);
     try {
       const data = await api.listAccounts();
       setAccounts(data[provider].adAccounts || []);
+      // pre-mark the account this workspace currently reports on
+      const stored = data[provider].selectedAdAccountId || null;
+      const valid = (data[provider].adAccounts || []).some((a) => a.id === stored);
+      setCurrentId(valid ? stored : null);
+      setSelectedId((cur) => cur || (valid ? stored : null));
     } catch (err) {
       setError(err.message);
     }
@@ -34,9 +41,10 @@ export default function SelectAccount() {
     setSaving(true);
     try {
       await api.selectAccount(provider, selectedId);
-      // Both platforms continue to their own metric picker - each one's
-      // conversion actions are configured separately.
-      window.location.href = `/select-metrics.html?provider=${provider}`;
+      // Pulse and Campaigns read the selection live, so both re-sync to the
+      // new account on their next load. Conversions live in the master
+      // metrics setup (Settings), not per platform.
+      window.location.href = '/settings.html';
     } catch (err) {
       setError(err.message);
       setSaving(false);
@@ -79,7 +87,10 @@ export default function SelectAccount() {
                     }
                   }}
                 >
-                  <span className="select-account-name">{acc.name}</span>
+                  <span className="select-account-name">
+                    {acc.name}
+                    {currentId === acc.id && <span className="select-account-current"> · current</span>}
+                  </span>
                   <span className="select-account-id">{acc.id}</span>
                 </div>
               ))}

@@ -48,7 +48,7 @@ export default function Upgrade() {
             <span className="upgrade-plan-price">$0</span>
             <span className="upgrade-plan-badge current">Your current plan</span>
             <ul className="upgrade-features">
-              <li>Meta + Google Ads reporting</li>
+              <li>Meta + Google Ads in one dashboard</li>
               <li>AI insights & alert assistant</li>
               <li>Creative gallery</li>
               <li>Local SEO & reviews</li>
@@ -70,7 +70,7 @@ export default function Upgrade() {
         </div>
         <p className="upgrade-note">
           Pro isn't purchasable yet — pricing and checkout are on the way. Everything you use today
-          stays free. <Link to="/reporting.html">Back to Reporting</Link>
+          stays free. <Link to="/pulse.html">Back to Pulse</Link>
         </p>
       </main>
     </div>

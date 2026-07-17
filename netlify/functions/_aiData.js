@@ -1,14 +1,13 @@
 // The condensed cross-platform performance snapshot Claude sees - used by
 // both the AI insights card and the chat assistant. Never raw rows: period
 // totals, per-metric counts/cost-pers, and top/bottom ads only. Meta is
-// required (the app's primary platform); Google Ads and Search Console
-// sections are included when connected and silently omitted when their
+// required (the app's primary platform); the Google Ads section is
+// included when connected and silently omitted when its
 // fetch fails, so one platform's trouble never blocks the summary.
 const { resolveRange } = require('./_dates');
 const { metaGet, readRow, sumRows, costPer } = require('./_meta');
 const { getSelectedMetrics } = require('./_metrics');
 const { fetchGoogleCampaignDaily, fetchGoogleConversionsDaily } = require('./_googleAds');
-const { scQuery } = require('./_google');
 
 const PERFORMER_COUNT = 3;
 
@@ -117,22 +116,6 @@ async function googleSection(google, since, until, prevSince, prevUntil) {
   };
 }
 
-async function seoSection(google, since, until) {
-  const res = await scQuery(google, google.selectedScSiteUrl, {
-    startDate: since,
-    endDate: until,
-    dimensions: [],
-    rowLimit: 1
-  });
-  if (res.status !== 200) return null;
-  const row = (res.json.rows || [])[0] || {};
-  return {
-    clicks: row.clicks || 0,
-    impressions: row.impressions || 0,
-    avgPosition: row.position != null ? +row.position.toFixed(1) : null
-  };
-}
-
 // The full snapshot. Sections beyond Meta are best-effort.
 async function buildSnapshot(user, range) {
   const meta = user.accounts.meta;
@@ -147,14 +130,6 @@ async function buildSnapshot(user, range) {
       summary.googleAds = await googleSection(google, since, until, prevSince, prevUntil);
     } catch (err) {
       console.error(`[aiData] Google Ads section skipped: ${err.message}`);
-    }
-  }
-  if (google && google.selectedScSiteUrl) {
-    try {
-      const seo = await seoSection(google, since, until);
-      if (seo) summary.googleSearchOrganic = seo;
-    } catch (err) {
-      console.error(`[aiData] Search Console section skipped: ${err.message}`);
     }
   }
   return summary;

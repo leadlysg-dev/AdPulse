@@ -83,12 +83,6 @@ export const api = {
   listMetrics: (provider) =>
     request(`/.netlify/functions/list-metrics?provider=${encodeURIComponent(provider)}`),
 
-  selectMetrics: (provider, metrics) =>
-    request('/.netlify/functions/select-metrics', {
-      method: 'POST',
-      body: JSON.stringify({ provider, metrics })
-    }),
-
   setGoal: (provider, metricId, targetCostPer) =>
     request('/.netlify/functions/set-goal', {
       method: 'POST',
@@ -113,12 +107,6 @@ export const api = {
       body: JSON.stringify({ currentPassword, newPassword })
     }),
 
-  saveAiPrefs: (prefs) =>
-    request('/.netlify/functions/save-ai-prefs', {
-      method: 'POST',
-      body: JSON.stringify(prefs)
-    }),
-
   getAiInsights: (range, refresh = false, check = false) =>
     request(
       `/.netlify/functions/get-ai-insights?range=${encodeURIComponent(range)}${refresh ? '&refresh=1' : ''}${check ? '&check=1' : ''}`
@@ -136,8 +124,6 @@ export const api = {
       body: JSON.stringify({ provider })
     }),
 
-  getSeo: (view) => request(`/.netlify/functions/get-seo?${viewQuery(view)}`),
-
   getGbp: (view) => request(`/.netlify/functions/get-gbp?${viewQuery(view)}`),
 
   selectGbpLocation: (locationId) =>
@@ -150,12 +136,6 @@ export const api = {
     request('/.netlify/functions/reply-review', {
       method: 'POST',
       body: JSON.stringify({ reviewId, comment })
-    }),
-
-  selectScProperty: (siteUrl) =>
-    request('/.netlify/functions/select-sc-property', {
-      method: 'POST',
-      body: JSON.stringify({ siteUrl })
     }),
 
   assistantChat: (messages) =>

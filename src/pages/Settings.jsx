@@ -5,30 +5,11 @@ import ErrorState from '../components/ErrorState';
 import MetricsOnboarding from '../components/MetricsOnboarding';
 import './Settings.css';
 
-// AI features are on by default - for new customers and for existing ones
-// who never saved preferences (the server treats never-saved the same way).
-// Only an explicitly saved "off" turns them off.
-const DEFAULT_AI_PREFS = {
-  enabled: true,
-  insights: { enabled: true, cadence: 'weekly', prompt: '' },
-  assistant: { enabled: true, instructions: '' }
-};
-
-function Toggle({ label, checked, onChange, disabled = false }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      className={`toggle${checked ? ' toggle-on' : ''}`}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-    >
-      <span className="toggle-knob" />
-    </button>
-  );
-}
+// NOTE: the AI-preferences UI was removed for now, but any defaults it ever
+// saved (user.aiPrefs: { enabled, insights:{enabled,cadence,prompt},
+// assistant:{enabled,instructions} }) stay stored server-side and keep
+// feeding chat/alert behaviour unchanged. The save-ai-prefs function still
+// exists for when the UI returns.
 
 function ConnectionRow({ label, connected, connectHref, onDisconnect, disconnectNote }) {
   const [confirming, setConfirming] = useState(false);
@@ -102,13 +83,7 @@ export default function Settings() {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSaved, setPasswordSaved] = useState(false);
 
-  // AI preferences form
-  const [prefs, setPrefs] = useState(null);
-  const [prefsBusy, setPrefsBusy] = useState(false);
-  const [prefsError, setPrefsError] = useState('');
-  const [prefsSaved, setPrefsSaved] = useState(false);
-
-  // Master metrics setup (the only place it can be re-run)
+  // Master metrics setup (the only metrics control in the app)
   const [metricsConfig, setMetricsConfig] = useState(null);
   const [metricsSetup, setMetricsSetup] = useState(false);
   const [metricsSaved, setMetricsSaved] = useState(false);
@@ -126,9 +101,6 @@ export default function Settings() {
         return;
       }
       setStatus(s);
-      // Only seed the form on first load so a background refresh (e.g. after
-      // a disconnect) can't wipe unsaved edits.
-      setPrefs((p) => p || { ...DEFAULT_AI_PREFS, ...(s.aiPrefs || {}) });
     } catch (err) {
       setStatusError(err.message);
     }
@@ -164,28 +136,6 @@ export default function Settings() {
       setPasswordBusy(false);
     }
   }
-
-  function setPref(updater) {
-    setPrefsSaved(false);
-    setPrefs((p) => updater(p));
-  }
-
-  async function savePrefs() {
-    setPrefsError('');
-    setPrefsSaved(false);
-    setPrefsBusy(true);
-    try {
-      const saved = await api.saveAiPrefs(prefs);
-      setPrefs(saved.aiPrefs);
-      setPrefsSaved(true);
-    } catch (err) {
-      setPrefsError(err.message);
-    } finally {
-      setPrefsBusy(false);
-    }
-  }
-
-  const aiOff = !prefs?.enabled;
 
   return (
     <div className="settings-page">
@@ -281,7 +231,7 @@ export default function Settings() {
                     await api.disconnectProvider('meta');
                     await loadStatus();
                   }}
-                  disconnectNote="Disconnecting Meta removes its stored access, your selected ad account, and your tracked metrics and goals. Your Pulse account and history of other settings stay. You can reconnect any time."
+                  disconnectNote="Disconnecting Meta removes its stored access and your selected ad account. Your Pulse account, metrics setup, and other settings stay. You can reconnect any time."
                 />
                 <div className="settings-divider" role="separator" />
                 <ConnectionRow
@@ -305,8 +255,8 @@ export default function Settings() {
                     <span className="settings-row-label">What Pulse tracks</span>
                     <span className="settings-hint">
                       {metricsConfig
-                        ? `Your headline result is “${metricsConfig.primaryResult?.name || 'Enquiries'}”. Re-run the setup to change the metrics and results shown across the app.`
-                        : 'Run the setup to choose the metrics and results shown across the app.'}
+                        ? `Your headline result is “${metricsConfig.primaryResult?.name || 'Enquiries'}”. Re-run the setup to change the metrics and results shown across Pulse and Campaigns.`
+                        : 'Run the setup to choose the metrics and results shown across Pulse and Campaigns.'}
                     </span>
                   </div>
                   <button type="button" className="btn btn-secondary" onClick={() => setMetricsSetup(true)}>
@@ -317,174 +267,44 @@ export default function Settings() {
               </div>
             </section>
 
-            {status.metaConnected && (
+            {(status.metaConnected || status.googleConnected) && (
               <section className="settings-section">
                 <h2>Data</h2>
                 <div className="card settings-card">
-                  <div className="settings-row">
-                    <div className="settings-row-copy">
-                      <span className="settings-row-label">Meta ad account</span>
-                      <span className="settings-hint">Which ad account Pulse reports on.</span>
-                    </div>
-                    <Link className="btn btn-secondary" to="/select-account.html?provider=meta">
-                      Change
-                    </Link>
-                  </div>
-                  {status.googleConnected && (
-                    <>
-                      <div className="settings-divider" role="separator" />
-                      <div className="settings-row">
-                        <div className="settings-row-copy">
-                          <span className="settings-row-label">Search Console property</span>
-                          <span className="settings-hint">
-                            {status.scSiteUrl || 'Not selected yet — pick one on the SEO tab.'}
-                          </span>
-                        </div>
-                        <Link className="btn btn-secondary" to="/seo.html">
-                          {status.scSiteUrl ? 'View' : 'Choose'}
-                        </Link>
+                  {status.metaConnected && (
+                    <div className="settings-row">
+                      <div className="settings-row-copy">
+                        <span className="settings-row-label">Meta ad account</span>
+                        <span className="settings-hint">
+                          {status.metaAccountName
+                            ? `Which ad account Pulse reports on — currently ${status.metaAccountName}.`
+                            : 'Not selected — choose an account.'}
+                        </span>
                       </div>
-                    </>
+                      <Link className="btn btn-secondary" to="/select-account.html?provider=meta">
+                        {status.metaAccountName ? 'Change' : 'Choose'}
+                      </Link>
+                    </div>
                   )}
-                  <div className="settings-divider" role="separator" />
-                  <div className="settings-row">
-                    <div className="settings-row-copy">
-                      <span className="settings-row-label">Meta tracked metrics</span>
-                      <span className="settings-hint">The Meta conversions shown across Reporting and Pulse.</span>
-                    </div>
-                    <Link className="btn btn-secondary" to="/select-metrics.html?provider=meta">
-                      Edit
-                    </Link>
-                  </div>
+                  {status.metaConnected && status.googleConnected && <div className="settings-divider" role="separator" />}
                   {status.googleConnected && (
-                    <>
-                      <div className="settings-divider" role="separator" />
-                      <div className="settings-row">
-                        <div className="settings-row-copy">
-                          <span className="settings-row-label">Google tracked metrics</span>
-                          <span className="settings-hint">
-                            {status.googleNeedsMetrics
-                              ? 'Not chosen yet — pick which Google conversion actions to track.'
-                              : 'The Google conversion actions shown on Reporting.'}
-                          </span>
-                        </div>
-                        <Link className="btn btn-secondary" to="/select-metrics.html?provider=google">
-                          {status.googleNeedsMetrics ? 'Choose' : 'Edit'}
-                        </Link>
+                    <div className="settings-row">
+                      <div className="settings-row-copy">
+                        <span className="settings-row-label">Google ad account</span>
+                        <span className="settings-hint">
+                          {status.googleAccountName
+                            ? `Which ad account Pulse reports on — currently ${status.googleAccountName}.`
+                            : 'Not selected — choose an account.'}
+                        </span>
                       </div>
-                    </>
+                      <Link className="btn btn-secondary" to="/select-account.html?provider=google">
+                        {status.googleAccountName ? 'Change' : 'Choose'}
+                      </Link>
+                    </div>
                   )}
                 </div>
               </section>
             )}
-
-            <section className="settings-section">
-              <h2>AI preferences</h2>
-              <p className="settings-section-sub">
-                These preferences save now; the AI features that use them are coming in a later update.
-              </p>
-              {prefs && (
-                <div className="card settings-card">
-                  <div className="settings-row">
-                    <div className="settings-row-copy">
-                      <span className="settings-row-label">AI features</span>
-                      <span className="settings-hint">Master switch for everything below.</span>
-                    </div>
-                    <Toggle
-                      label="AI features"
-                      checked={prefs.enabled}
-                      onChange={(v) => setPref((p) => ({ ...p, enabled: v }))}
-                    />
-                  </div>
-
-                  <div className="settings-divider" role="separator" />
-
-                  <div className={`ai-group${aiOff ? ' is-disabled' : ''}`}>
-                    <div className="settings-row">
-                      <div className="settings-row-copy">
-                        <span className="settings-row-label">Daily / weekly insights</span>
-                        <span className="settings-hint">A recurring summary of how your ads are doing.</span>
-                      </div>
-                      <Toggle
-                        label="Daily or weekly insights"
-                        checked={prefs.insights.enabled}
-                        disabled={aiOff}
-                        onChange={(v) => setPref((p) => ({ ...p, insights: { ...p.insights, enabled: v } }))}
-                      />
-                    </div>
-
-                    <div className="ai-field">
-                      <span className="settings-row-label" id="cadence-label">Frequency</span>
-                      <div className="range-picker" role="group" aria-labelledby="cadence-label">
-                        {['daily', 'weekly'].map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            className={`range-picker-option${prefs.insights.cadence === c ? ' selected' : ''}`}
-                            aria-pressed={prefs.insights.cadence === c}
-                            disabled={aiOff || !prefs.insights.enabled}
-                            onClick={() => setPref((p) => ({ ...p, insights: { ...p.insights, cadence: c } }))}
-                          >
-                            {c === 'daily' ? 'Daily' : 'Weekly'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="ai-field">
-                      <label htmlFor="insights-prompt">What should the summaries focus on?</label>
-                      <textarea
-                        id="insights-prompt"
-                        rows={3}
-                        maxLength={2000}
-                        placeholder="e.g. Focus on cost per lead and flag any ad whose results dropped versus last week."
-                        disabled={aiOff || !prefs.insights.enabled}
-                        value={prefs.insights.prompt}
-                        onChange={(e) => setPref((p) => ({ ...p, insights: { ...p.insights, prompt: e.target.value } }))}
-                      />
-                    </div>
-
-                    <div className="settings-divider" role="separator" />
-
-                    <div className="settings-row">
-                      <div className="settings-row-copy">
-                        <span className="settings-row-label">AI assistant &amp; alerts</span>
-                        <span className="settings-hint">Ask questions and get notified when something needs attention.</span>
-                      </div>
-                      <Toggle
-                        label="AI assistant and alerts"
-                        checked={prefs.assistant.enabled}
-                        disabled={aiOff}
-                        onChange={(v) => setPref((p) => ({ ...p, assistant: { ...p.assistant, enabled: v } }))}
-                      />
-                    </div>
-
-                    <div className="ai-field">
-                      <label htmlFor="assistant-instructions">Default instructions</label>
-                      <textarea
-                        id="assistant-instructions"
-                        rows={3}
-                        maxLength={2000}
-                        placeholder="e.g. Only alert me about big swings, and keep messages short."
-                        disabled={aiOff || !prefs.assistant.enabled}
-                        value={prefs.assistant.instructions}
-                        onChange={(e) =>
-                          setPref((p) => ({ ...p, assistant: { ...p.assistant, instructions: e.target.value } }))
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="settings-actions">
-                    <button type="button" className="btn btn-primary" disabled={prefsBusy} onClick={savePrefs}>
-                      {prefsBusy ? 'Saving…' : 'Save AI preferences'}
-                    </button>
-                    {prefsSaved && <span className="settings-saved">Saved</span>}
-                  </div>
-                  {prefsError && <p className="settings-error" role="alert">{prefsError}</p>}
-                </div>
-              )}
-            </section>
           </>
         )}
 

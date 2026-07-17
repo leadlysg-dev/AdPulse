@@ -55,11 +55,6 @@ function assembleProvider(row) {
     connectedAt: row.connected_at
   };
   if (row.can_manage !== null && row.can_manage !== undefined) provider.canManage = row.can_manage;
-  const scProps = (row.sc_properties || [])
-    .sort(byPosition)
-    .map((p) => ({ siteUrl: p.site_url, permission: p.permission }));
-  if (scProps.length) provider.scProperties = scProps;
-  if (row.selected_sc_site_url) provider.selectedScSiteUrl = row.selected_sc_site_url;
   if (row.refresh_token) provider.refreshToken = row.refresh_token;
   const metrics = (row.selected_metrics || [])
     .sort(byPosition)
@@ -88,7 +83,6 @@ async function getUser(email) {
       // can_manage, ...) can't break every getUser call app-wide.
       '*, ' +
         'ad_accounts ( * ), ' +
-        'sc_properties ( site_url, permission, position ), ' +
         'selected_metrics ( metric_id, label, position, target_cost_per )'
     )
     .eq('user_id', u.id);
@@ -544,7 +538,6 @@ async function saveUser(user) {
       access_token: acc.accessToken || null,
       refresh_token: acc.refreshToken || null,
       selected_ad_account_id: acc.selectedAdAccountId || null,
-      selected_sc_site_url: acc.selectedScSiteUrl || null,
       connected_at: acc.connectedAt || null,
       can_manage: acc.canManage === undefined ? null : acc.canManage
     };
@@ -591,26 +584,6 @@ async function saveUser(user) {
           .insert(rows.map(({ login_customer_id, ...rest }) => rest)));
       }
       if (error) fail(error, `saving ${provider} ad accounts`);
-    }
-
-    const { error: delScError } = await db()
-      .from('sc_properties')
-      .delete()
-      .eq('connected_account_id', row.id);
-    if (delScError) fail(delScError, `clearing ${provider} Search Console properties`);
-
-    if (acc.scProperties && acc.scProperties.length) {
-      const { error } = await db()
-        .from('sc_properties')
-        .insert(
-          acc.scProperties.map((p, i) => ({
-            connected_account_id: row.id,
-            site_url: p.siteUrl,
-            permission: p.permission || null,
-            position: i
-          }))
-        );
-      if (error) fail(error, `saving ${provider} Search Console properties`);
     }
 
     const { error: delMetricsError } = await db()

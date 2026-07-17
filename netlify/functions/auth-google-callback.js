@@ -3,12 +3,11 @@
 // which one to track - same pattern as the Meta callback.
 //
 // This function logs what Google actually answered at each step (scopes
-// granted, accounts listed, Search Console status) because its failures have
+// granted, accounts listed) because its failures have
 // historically been invisible: a sunset API version returned errors here for
 // months and nothing recorded it. Tokens are never logged.
 const fetch = require('node-fetch');
 const { getUser, saveUser, clearAiInsightCache } = require('./_store');
-const { listScProperties } = require('./_google');
 const { listClientAccounts } = require('./_googleAds');
 
 exports.handler = async (event) => {
@@ -33,8 +32,8 @@ exports.handler = async (event) => {
     );
     return { statusCode: 400, body: 'Could not connect Google account: ' + JSON.stringify(tokenData) };
   }
-  // Ground truth for "did the consent actually include Search Console":
-  // Google lists the granted scopes on the token response.
+  // Google lists the granted scopes on the token response - logged for
+  // debugging consent issues.
   console.log(
     `[auth-google-callback] scopes granted: ${tokenData.scope || '(none reported)'} | refresh_token: ${tokenData.refresh_token ? 'yes' : 'NO'}`
   );
@@ -62,25 +61,6 @@ exports.handler = async (event) => {
     adAccounts = [];
   }
 
-  // Same token also covers Search Console - list the customer's properties
-  // for the SEO tab. A denied listing stays null (NOT an empty list): null
-  // means "couldn't check", [] means "checked, user has no properties", and
-  // the SEO tab treats those differently.
-  let scProperties = null;
-  try {
-    const sc = await listScProperties(googleConn);
-    scProperties = sc.properties;
-    if (scProperties === null) {
-      console.error(
-        `[auth-google-callback] Search Console listing denied: status=${sc.status} reason=${sc.reason} ${sc.message}`
-      );
-    } else {
-      console.log(`[auth-google-callback] Search Console properties: ${scProperties.length}`);
-    }
-  } catch (err) {
-    console.error(`[auth-google-callback] Search Console listing failed: ${err.message}`);
-  }
-
   const previous = user.accounts.google || {};
   user.accounts.google = {
     accessToken: googleConn.accessToken,
@@ -90,9 +70,6 @@ exports.handler = async (event) => {
     refreshToken: tokenData.refresh_token || previous.refreshToken,
     adAccounts,
     selectedAdAccountId: adAccounts.length === 1 ? adAccounts[0].id : null,
-    ...(scProperties !== null ? { scProperties } : {}),
-    selectedScSiteUrl:
-      scProperties && scProperties.length === 1 ? scProperties[0].siteUrl : null,
     connectedAt: new Date().toISOString()
   };
 
@@ -108,14 +85,8 @@ exports.handler = async (event) => {
     };
   }
 
-  // More than one account: pick one first. Exactly one (auto-selected) and
-  // no conversion metrics chosen yet: straight to Google's metric picker.
-  const g = user.accounts.google;
-  const next =
-    adAccounts.length > 1
-      ? '/select-account.html?provider=google'
-      : g.selectedAdAccountId && !(g.selectedMetrics && g.selectedMetrics.length)
-        ? '/select-metrics.html?provider=google'
-        : '/dashboard.html?connected=google';
+  // More than one account: pick one first. Otherwise straight back to the
+  // dashboard - the master metrics setup (Pulse) covers conversions now.
+  const next = adAccounts.length > 1 ? '/select-account.html?provider=google' : '/pulse.html?connected=google';
   return { statusCode: 302, headers: { Location: next }, body: '' };
 };

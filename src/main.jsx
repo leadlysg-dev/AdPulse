@@ -13,7 +13,6 @@ import AutomationsTab from './pages/app/AutomationsTab';
 import Settings from './pages/Settings';
 import Seo from './pages/Seo';
 import SelectAccount from './pages/SelectAccount';
-import SelectMetrics from './pages/SelectMetrics';
 import Upgrade from './pages/Upgrade';
 
 // "/" (and any unknown path) routes into the app: logged-in visitors go to
@@ -62,7 +61,6 @@ const PAGES = [
   ['settings', tab('Settings', <Settings />)],
   ['seo', tab('Local SEO', <Seo />)],
   ['select-account', <SelectAccount />],
-  ['select-metrics', <SelectMetrics />],
   ['upgrade', tab('Upgrade', <Upgrade />)]
 ];
 
