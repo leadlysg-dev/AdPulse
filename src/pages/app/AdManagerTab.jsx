@@ -2,26 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { useShell } from '../../components/Shell';
 import DateSelector, { toView } from '../../components/DateSelector';
-import MetricsPicker from '../../components/MetricsPicker';
-import { labelFor, DEFAULT_TRACKED } from '../../lib/metrics';
+import TableControls, { filterPredicate } from '../../components/TableControls';
+import { masterColumns, nodeValue, formatCol, goodUpFor } from '../../lib/metrics';
 
 const money = (v) => 'S$' + (v || 0).toLocaleString('en-SG', { maximumFractionDigits: v >= 100 ? 0 : 2 });
 const LOCK_TIP = 'Managed by Leadly — ask Pulse to request a change';
 const THUMBS = ['t1', 't2', 't3', 't4', 't5', 't6'];
-
-// column definitions over the tree's per-level metrics; ids align with the
-// tracked-metrics vocabulary so both tabs follow the same source
-const COL_DEFS = [
-  ['spend', 'Spend', (m) => money(m.spend || 0), (m) => m.spend || 0],
-  ['impressions', 'Impr.', (m) => (m.impressions || 0).toLocaleString(), (m) => m.impressions || 0],
-  ['clicks', 'Clicks', (m) => (m.clicks || 0).toLocaleString(), (m) => m.clicks || 0],
-  ['ctr', 'CTR', (m) => (m.ctr != null ? m.ctr.toFixed(2) + '%' : '—'), (m) => m.ctr ?? -1],
-  ['cpc', 'CPC', (m) => (m.cpc != null ? money(m.cpc) : '—'), (m) => m.cpc ?? -1],
-  ['enquiries', 'Leads', (m) => m.conversions ?? '—', (m) => m.conversions ?? -1],
-  ['cpe', 'CPL', (m) => (m.cpa != null ? money(m.cpa) : '—'), (m) => m.cpa ?? Infinity],
-  ['conv_rate', 'Conv. rate', (m) => (m.clicks > 0 && m.conversions != null ? ((m.conversions / m.clicks) * 100).toFixed(1) + '%' : '—'), (m) => (m.clicks > 0 ? (m.conversions || 0) / m.clicks : -1)],
-  ['roas', 'ROAS', (m) => (m.roas != null ? m.roas.toFixed(1) + '×' : '—'), (m) => m.roas ?? -1]
-];
 
 function Switch({ on, locked, busy, label, onToggle }) {
   return (
@@ -64,6 +50,27 @@ function BudgetCell({ node, locked, busy, onBudget }) {
   );
 }
 
+function Delta({ pct, goodUp }) {
+  if (pct === null || pct === undefined || !isFinite(pct)) return null;
+  const good = goodUp === null ? null : pct >= 0 === goodUp;
+  const cls = good === null ? 'flat' : good ? 'up' : 'down';
+  return (
+    <span className={`delta delta-sm ${cls}`}>
+      {pct >= 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
+    </span>
+  );
+}
+
+// The matched-length window immediately before [since, until].
+function previousWindow(since, until) {
+  const DAY = 86400000;
+  const s = new Date(since + 'T00:00:00Z').getTime();
+  const u = new Date(until + 'T00:00:00Z').getTime();
+  const len = Math.round((u - s) / DAY) + 1;
+  const fmt = (t) => new Date(t).toISOString().slice(0, 10);
+  return { since: fmt(s - len * DAY), until: fmt(s - DAY) };
+}
+
 export default function AdManagerTab() {
   const { status, role, toast } = useShell();
   const locked = role === 'client';
@@ -72,20 +79,17 @@ export default function AdManagerTab() {
   const [range, setRange] = useState({ key: 'last_7d', label: 'Last 7 days' });
   const [compare, setCompare] = useState(false);
   const [trees, setTrees] = useState(null); // { meta, google }
+  const [prevIndex, setPrevIndex] = useState(null); // "channel:id" -> metrics of the preceding period
   const [error, setError] = useState(null);
   const [platform, setPlatform] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [accountFilter, setAccountFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState([]);
   const [selected, setSelected] = useState(() => new Set());
   const [expanded, setExpanded] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [accounts, setAccounts] = useState(null); // { meta:{id,name}, google:{id,name} }
-  const [tracked, setTracked] = useState(DEFAULT_TRACKED);
-  const [customLabels, setCustomLabels] = useState({});
-  const [picker, setPicker] = useState(false);
-  const [showAllCols, setShowAllCols] = useState(false);
+  const [config, setConfig] = useState(null);
   // last-used sort persists per user
   const sortKey = `adm-sort:${email}`;
   const [sort, setSort] = useState(() => {
@@ -104,7 +108,7 @@ export default function AdManagerTab() {
   }, [sort, sortKey]);
 
   useEffect(() => {
-    api.trackedMetrics().then((r) => r.metrics?.length && setTracked(r.metrics)).catch(() => {});
+    api.metricsConfig().then((r) => setConfig(r.config)).catch(() => {});
     api
       .listAccounts()
       .then((r) => {
@@ -140,6 +144,39 @@ export default function AdManagerTab() {
     load();
   }, [load]);
 
+  // "vs previous period": fetch the matched-length preceding window's trees
+  // once per range and index every node's metrics by channel:id, so every
+  // cell can show its own delta - custom ranges included.
+  useEffect(() => {
+    if (!compare || !trees) {
+      setPrevIndex(null);
+      return;
+    }
+    let cancelled = false;
+    const src = trees.meta?.state === 'ok' ? trees.meta : trees.google?.state === 'ok' ? trees.google : null;
+    if (!src || !src.since || !src.until) return;
+    const win = previousWindow(src.since, src.until);
+    Promise.all([
+      api.getManageTree(win, 'meta').catch(() => null),
+      api.getManageTree(win, 'google').catch(() => null)
+    ]).then(([m, g]) => {
+      if (cancelled) return;
+      const index = {};
+      const walk = (channel, nodes) => {
+        for (const nd of nodes || []) {
+          index[`${channel}:${nd.id}`] = nd.metrics || {};
+          walk(channel, nd.children);
+        }
+      };
+      if (m?.state === 'ok') walk('meta', m.campaigns);
+      if (g?.state === 'ok') walk('google', g.campaigns);
+      setPrevIndex(index);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [compare, trees]);
+
   const campaigns = useMemo(() => {
     if (!trees) return null;
     const all = [];
@@ -153,34 +190,51 @@ export default function AdManagerTab() {
   }, [trees]);
 
   const accountNames = useMemo(() => [...new Set((campaigns || []).map((c) => c.accountName))], [campaigns]);
+  const cols = useMemo(() => masterColumns(config), [config]);
+  const colById = useMemo(() => Object.fromEntries(cols.map((c) => [c.id, c])), [cols]);
 
-  const colFor = (id) => COL_DEFS.find(([d]) => d === id);
-  const visibleCols = useMemo(() => {
-    const trackedCols = tracked.filter((id) => colFor(id) || id.startsWith('event:'));
-    return showAllCols
-      ? [...COL_DEFS.map(([id]) => id), ...tracked.filter((id) => id.startsWith('event:'))]
-      : trackedCols.length ? trackedCols : ['spend', 'enquiries', 'cpe'];
-  }, [tracked, showAllCols]);
+  // Universal controls: search + "+ Filter" chips, no fixed filter buttons
+  const filterFields = useMemo(
+    () => [
+      { id: 'status', label: 'Status', kind: 'choice', options: [{ value: 'active', label: 'Live' }, { value: 'paused', label: 'Paused' }] },
+      { id: 'platform', label: 'Platform', kind: 'choice', options: [{ value: 'meta', label: 'Meta' }, { value: 'google', label: 'Google' }] },
+      ...(accountNames.length > 1
+        ? [{ id: 'account', label: 'Account', kind: 'choice', options: accountNames.map((n) => ({ value: n, label: n })) }]
+        : []),
+      { id: 'campaign', label: 'Campaign', kind: 'choice', options: (campaigns || []).map((c) => ({ value: c.name, label: c.name })).slice(0, 20) },
+      ...cols.map((c) => ({ id: c.id, label: c.label, kind: 'number', money: /spend|cost|cpc|cpm/i.test(c.id) }))
+    ],
+    [accountNames, campaigns, cols]
+  );
+
+  const sortNodes = useCallback(
+    (list, channel) => {
+      const dir = sort.dir === 'asc' ? 1 : -1;
+      const out = [...list];
+      if (sort.col === 'name') out.sort((a, b) => a.name.localeCompare(b.name) * dir);
+      else if (colById[sort.col]) {
+        const col = colById[sort.col];
+        const chOf = (nd) => channel || nd.channel;
+        out.sort((a, b) => ((nodeValue(col, a, chOf(a)) ?? -Infinity) - (nodeValue(col, b, chOf(b)) ?? -Infinity)) * dir);
+      }
+      return out;
+    },
+    [sort, colById]
+  );
 
   const visible = useMemo(() => {
     if (!campaigns) return [];
+    const valueOf = (c, field) =>
+      field === 'status' ? c.status : field === 'platform' ? c.channel : field === 'account' ? c.accountName : field === 'campaign' ? c.name : nodeValue(colById[field], c, c.channel);
+    const keep = filterPredicate(filters, filterFields, valueOf);
     const rows = campaigns.filter(
       (c) =>
         (platform === 'all' || c.channel === platform) &&
-        (statusFilter === 'all' || (statusFilter === 'fatigue' ? c.fatigue : c.status === statusFilter)) &&
-        (accountFilter === 'all' || c.accountName === accountFilter) &&
+        keep(c) &&
         (!search.trim() || c.name.toLowerCase().includes(search.trim().toLowerCase()))
     );
-    const def = colFor(sort.col);
-    if (def) {
-      const dir = sort.dir === 'asc' ? 1 : -1;
-      rows.sort((a, b) => (def[3](a.metrics || {}) - def[3](b.metrics || {})) * dir);
-    } else if (sort.col === 'name') {
-      const dir = sort.dir === 'asc' ? 1 : -1;
-      rows.sort((a, b) => a.name.localeCompare(b.name) * dir);
-    }
-    return rows;
-  }, [campaigns, platform, statusFilter, accountFilter, search, sort]);
+    return sortNodes(rows, null);
+  }, [campaigns, platform, search, filters, filterFields, sortNodes, colById]);
 
   const setSortCol = (col) =>
     setSort((s) => (s.col === col ? { col, dir: s.dir === 'desc' ? 'asc' : 'desc' } : { col, dir: 'desc' }));
@@ -254,16 +308,46 @@ export default function AdManagerTab() {
       return next;
     });
 
-  // rows render campaign → ad sets/ad groups → ads; children mount on first
-  // expand (lazy), each level carrying the same metric columns
-  const renderNode = (node, channel, canManage, depth, out) => {
-    const key = nodeKey(channel, node.id);
-    const isOpen = expanded.has(key);
+  // Flatten campaign -> ad set / ad group -> ad into row descriptors first
+  // (children sorted with the same comparator), so the last row of each
+  // expanded group can carry the bracketing border class.
+  const flatRows = useMemo(() => {
+    const out = [];
+    const push = (node, channel, canManage, depth) => {
+      const key = nodeKey(channel, node.id);
+      const isOpen = expanded.has(key);
+      out.push({ node, channel, canManage, depth, key, isOpen, grpLast: false, grpOpen: depth === 0 && isOpen });
+      if (isOpen) {
+        for (const child of sortNodes(node.children || [], channel)) {
+          push({ ...child, accountName: node.accountName }, channel, canManage, depth + 1);
+        }
+      }
+    };
+    for (const c of visible) {
+      const before = out.length;
+      push(c, c.channel, c.canManage, 0);
+      if (out.length > before + 1) out[out.length - 1].grpLast = true;
+    }
+    return out;
+  }, [visible, expanded, sortNodes]);
+
+  const cellDelta = (col, node, channel) => {
+    if (!compare || !prevIndex) return null;
+    const prevMetrics = prevIndex[nodeKey(channel, node.id)];
+    if (!prevMetrics) return null;
+    const cur = nodeValue(col, node, channel);
+    const prev = nodeValue(col, { metrics: prevMetrics }, channel);
+    if (cur == null || prev == null || prev <= 0) return null;
+    return ((cur - prev) / prev) * 100;
+  };
+
+  const renderRow = ({ node, channel, canManage, depth, key, isOpen, grpLast, grpOpen }) => {
     const rowLocked = locked || !canManage;
     const entityType = node.type || (depth === 0 ? 'campaign' : depth === 1 ? (channel === 'meta' ? 'adset' : 'adgroup') : 'ad');
     const isOn = node.status === 'active';
-    out.push(
-      <tr key={key} className={depth ? `lvl-${depth}` : ''}>
+    const cls = [depth ? `lvl-${depth}` : 'lvl-0', grpOpen ? 'grp-open' : '', grpLast ? 'grp-last' : ''].filter(Boolean).join(' ');
+    return (
+      <tr key={key} className={cls}>
         <td style={{ width: 36 }}>
           {depth === 0 && (
             <button type="button" className={`cb${selected.has(key) ? ' on' : ''}`} aria-label={`Select ${node.name}`} disabled={rowLocked}
@@ -296,10 +380,14 @@ export default function AdManagerTab() {
         <td className="num">
           <BudgetCell node={node} locked={rowLocked} busy={busy} onBudget={(v) => write(channel, node, entityType, 'set_budget', v)} />
         </td>
-        {visibleCols.map((id) => {
-          const def = colFor(id);
+        {cols.map((col) => {
+          const v = nodeValue(col, node, channel);
+          const pct = cellDelta(col, node, channel);
           return (
-            <td key={id} className="num">{def ? def[2](node.metrics || {}) : '—'}</td>
+            <td key={col.id} className="num">
+              {formatCol(col, v)}
+              {pct != null && <div><Delta pct={pct} goodUp={goodUpFor(col)} /></div>}
+            </td>
           );
         })}
         <td>
@@ -307,11 +395,7 @@ export default function AdManagerTab() {
         </td>
       </tr>
     );
-    if (isOpen) for (const child of node.children || []) renderNode({ ...child, accountName: node.accountName }, channel, canManage, depth + 1, out);
   };
-
-  const rows = [];
-  for (const c of visible) renderNode(c, c.channel, c.canManage, 0, rows);
 
   return (
     <>
@@ -321,27 +405,14 @@ export default function AdManagerTab() {
             <button key={id} type="button" className={platform === id ? 'on' : ''} onClick={() => setPlatform(id)}>{label}</button>
           ))}
         </div>
-        <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Status filter">
-          <option value="all">Status: All</option>
-          <option value="active">Live</option>
-          <option value="paused">Paused</option>
-          <option value="fatigue">Fatigue</option>
-        </select>
-        {accountNames.length > 1 && (
-          <select className="filter-select" value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)} aria-label="Account filter">
-            <option value="all">All accounts</option>
-            {accountNames.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-        )}
-        <div className="pb-input" style={{ flex: '0 1 240px' }}>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaigns…" aria-label="Search campaigns" />
-        </div>
-        <button type="button" className="sbtn sbtn-ghost sbtn-sm" onClick={() => setPicker(true)}>Edit tracked metrics</button>
-        <button type="button" className="sbtn sbtn-ghost sbtn-sm" aria-pressed={showAllCols} onClick={() => setShowAllCols((v) => !v)}>
-          {showAllCols ? 'Tracked columns' : 'Show all columns'}
-        </button>
+        <TableControls
+          search={search}
+          onSearch={setSearch}
+          filters={filters}
+          onFilters={setFilters}
+          fields={filterFields}
+          placeholder="Search campaigns…"
+        />
         <div style={{ marginLeft: 'auto', position: 'relative' }}>
           <button
             type="button"
@@ -389,7 +460,7 @@ export default function AdManagerTab() {
       {campaigns && (
         <div className="scard" style={{ overflow: 'hidden' }}>
           <div className="table-scroll">
-            <table className="spec-table">
+            <table className="spec-table adm-table">
               <thead>
                 <tr>
                   <th style={{ width: 36 }} />
@@ -398,48 +469,38 @@ export default function AdManagerTab() {
                   </th>
                   <th>Status</th>
                   <th className="num">Budget</th>
-                  {visibleCols.map((id) => (
-                    <th key={id} className="num th-sort" onClick={() => setSortCol(id)}>
-                      {colFor(id)?.[1] || labelFor(id, customLabels)}
-                      {sort.col === id && <span className="dir">{sort.dir === 'desc' ? '↓' : '↑'}</span>}
+                  {cols.map((c) => (
+                    <th key={c.id} className="num th-sort" onClick={() => setSortCol(c.id)}>
+                      {c.label}
+                      {sort.col === c.id && <span className="dir">{sort.dir === 'desc' ? '↓' : '↑'}</span>}
                     </th>
                   ))}
                   <th>On/Off</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 && (
+                {flatRows.length === 0 && (
                   <tr>
                     <td />
-                    <td className="pin" colSpan={4 + visibleCols.length}>
-                      <span className="section-sub">No campaigns match these filters.</span>
+                    <td className="pin" colSpan={4 + cols.length}>
+                      <span className="section-sub">No campaigns match this view.</span>
                     </td>
                   </tr>
                 )}
-                {rows}
+                {flatRows.map(renderRow)}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+      {compare && !prevIndex && campaigns && (
+        <p className="section-sub" style={{ marginTop: 8 }}>Fetching the previous period for comparison…</p>
       )}
       {locked && (
         <p className="section-sub" style={{ marginTop: 10 }}>
           Your campaigns are managed by Leadly. Ask Pulse (on the Pulse tab) to request any change — budgets, pausing,
           new ads — and the team is notified instantly.
         </p>
-      )}
-
-      {picker && (
-        <MetricsPicker
-          initial={tracked}
-          onClose={() => setPicker(false)}
-          onSaved={(metrics, labels) => {
-            setTracked(metrics);
-            setCustomLabels((cur) => ({ ...cur, ...labels }));
-            setPicker(false);
-            toast('Tracked metrics saved.');
-          }}
-        />
       )}
     </>
   );

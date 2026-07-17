@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import ErrorState from '../components/ErrorState';
+import MetricsOnboarding from '../components/MetricsOnboarding';
 import './Settings.css';
 
 // AI features are on by default - for new customers and for existing ones
@@ -106,6 +107,14 @@ export default function Settings() {
   const [prefsBusy, setPrefsBusy] = useState(false);
   const [prefsError, setPrefsError] = useState('');
   const [prefsSaved, setPrefsSaved] = useState(false);
+
+  // Master metrics setup (the only place it can be re-run)
+  const [metricsConfig, setMetricsConfig] = useState(null);
+  const [metricsSetup, setMetricsSetup] = useState(false);
+  const [metricsSaved, setMetricsSaved] = useState(false);
+  useEffect(() => {
+    api.metricsConfig().then((r) => setMetricsConfig(r.config)).catch(() => {});
+  }, []);
 
   const loadStatus = useCallback(async () => {
     setStatusError(null);
@@ -288,6 +297,26 @@ export default function Settings() {
               </div>
             </section>
 
+            <section className="settings-section">
+              <h2>Metrics</h2>
+              <div className="card settings-card">
+                <div className="settings-row">
+                  <div className="settings-row-copy">
+                    <span className="settings-row-label">What Pulse tracks</span>
+                    <span className="settings-hint">
+                      {metricsConfig
+                        ? `Your headline result is “${metricsConfig.primaryResult?.name || 'Enquiries'}”. Re-run the setup to change the metrics and results shown across the app.`
+                        : 'Run the setup to choose the metrics and results shown across the app.'}
+                    </span>
+                  </div>
+                  <button type="button" className="btn btn-secondary" onClick={() => setMetricsSetup(true)}>
+                    {metricsConfig ? 'Re-run metrics setup' : 'Run metrics setup'}
+                  </button>
+                </div>
+                {metricsSaved && <p className="settings-saved">Metrics saved — every tab now follows them.</p>}
+              </div>
+            </section>
+
             {status.metaConnected && (
               <section className="settings-section">
                 <h2>Data</h2>
@@ -457,6 +486,18 @@ export default function Settings() {
               )}
             </section>
           </>
+        )}
+
+        {metricsSetup && (
+          <MetricsOnboarding
+            initial={metricsConfig}
+            onClose={() => setMetricsSetup(false)}
+            onSaved={(saved) => {
+              setMetricsConfig(saved);
+              setMetricsSetup(false);
+              setMetricsSaved(true);
+            }}
+          />
         )}
       </main>
     </div>

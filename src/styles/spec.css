@@ -362,12 +362,62 @@ body::before,body::after{content:none}
 .th-sort{cursor:pointer;user-select:none;white-space:nowrap}
 .th-sort .dir{color:var(--cobalt);margin-left:3px}
 
-/* ── Ad Manager hierarchy ─────────────────────────── */
+/* ── Ad Manager hierarchy ─────────────────────────────
+   Campaign rows stay white with 600-weight names; ad set rows sit on
+   #FBFCFD indented 28px behind a 2px cobalt-tinted rail; ad rows on
+   #F6F7F9 indented 56px continuing the rail. Rows within a group divide
+   with --line-soft, groups with --line, and an expanded campaign gets a
+   soft bracketing border above and below its children. */
 .row-toggle{border:none;background:none;cursor:pointer;color:var(--ink-faint);padding:2px 4px;font-family:inherit}
-.row-toggle svg{transition:transform .15s ease-out}
+.row-toggle svg{transition:transform .18s ease-out}
 .row-toggle.open svg{transform:rotate(90deg)}
-.lvl-1 td.pin{padding-left:34px}
-.lvl-2 td.pin{padding-left:58px}
-.lvl-1,.lvl-2{background:#FBFCFD}
+.adm-table td{border-bottom:1px solid var(--line)}
+.adm-table .lvl-0 .tname{font-weight:600}
+.adm-table .lvl-1 td,.adm-table .lvl-2 td{border-bottom:1px solid var(--line-soft);padding-top:8px;padding-bottom:8px}
+.adm-table .lvl-1 td{background:#FBFCFD}
+.adm-table .lvl-2 td{background:#F6F7F9}
+.adm-table .lvl-1 td.pin{background:#FBFCFD}
+.adm-table .lvl-2 td.pin{background:#F6F7F9}
+.adm-table .lvl-1 .adm-name-cell{margin-left:28px;border-left:2px solid rgba(36,71,245,.28);padding-left:10px}
+.adm-table .lvl-2 .adm-name-cell{margin-left:56px;border-left:2px solid rgba(36,71,245,.28);padding-left:10px}
+.adm-table .lvl-1 .tname,.adm-table .lvl-2 .tname{font-weight:500;font-size:12.5px}
+.adm-table .grp-open td{border-bottom:1px solid var(--line-soft)}
+.adm-table .grp-last td{border-bottom:2px solid var(--line)}
 .ad-thumb{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:grid;place-items:center;color:#fff;font-size:9px;font-weight:800}
 .filter-select{font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 10px}
+
+/* ── Universal table controls: "+ Filter" menu and chips ─ */
+.fpop{position:absolute;left:0;top:calc(100% + 6px);z-index:var(--z-dropdown);min-width:220px;box-shadow:var(--shadow-pop);padding:6px;max-height:320px;overflow-y:auto}
+.fpop-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);padding:7px 10px 4px}
+.fpop-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;font:inherit;font-size:13px;color:var(--ink);background:none;border:none;border-radius:8px;padding:8px 10px;cursor:pointer}
+.fpop-item:hover{background:var(--line-soft)}
+.fpop-kind{font-size:10.5px;color:var(--ink-faint)}
+.fpop-num{display:flex;flex-direction:column;gap:8px;padding:4px 10px 10px}
+.fchip{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:600;color:var(--cobalt);background:var(--cobalt-soft);border:1px solid transparent;border-radius:99px;padding:5px 11px;cursor:pointer}
+.fchip:hover{border-color:var(--cobalt)}
+
+/* ── Blended result: expandable KPI + composition panel ─ */
+.kpi-primary{text-align:left;font:inherit;cursor:pointer;border:1px solid var(--line)}
+.kpi-primary:hover,.kpi-primary.open{border-color:var(--cobalt)}
+.kpi-expand{color:var(--ink-faint);font-size:10px}
+.comp-panel{padding:16px 18px;margin:-6px 0 14px}
+.comp-row{display:grid;grid-template-columns:110px 1fr 80px 110px;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.comp-row:last-of-type{border-bottom:none}
+.comp-event{font-size:13px;font-weight:600}
+.comp-count{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.comp-cost{font-size:12.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;text-align:right}
+.delta-sm{font-size:10.5px;padding:1px 6px}
+
+/* ── The six fixed diagrams ───────────────────────── */
+.chart-full{margin-top:14px}
+.chart-quiet{display:grid;place-items:center;min-height:110px;background:var(--line-soft);border-radius:var(--r-sm)}
+.ch-pairs{display:flex;flex-direction:column;gap:14px}
+.ch-pair-name{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;margin-bottom:6px}
+.ch-pair-row{display:grid;grid-template-columns:64px 1fr 44px;align-items:center;gap:10px;margin-top:5px}
+.ch-pair-lbl{font-size:11.5px;font-weight:600;color:var(--ink-soft)}
+.ch-pair-val{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.ch-heat-grid{display:flex;flex-direction:column;gap:3px}
+.ch-heat-row{display:grid;grid-template-columns:34px repeat(24,1fr);gap:3px;align-items:center}
+.ch-heat-dow{font-size:10.5px;font-weight:700;color:var(--ink-faint)}
+.ch-heat-cell{display:block;height:14px;border-radius:3px}
+.ch-heat-hour{height:auto;font-size:9.5px;color:var(--ink-faint);background:none !important}
