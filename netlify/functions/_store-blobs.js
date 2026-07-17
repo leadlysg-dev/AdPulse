@@ -150,6 +150,20 @@ async function createWorkspaceInvite() {
 async function isPlatformAdmin() {
   return false;
 }
+const needsSupabase = () => {
+  throw new Error('Studio requires the Supabase backend (unset STORAGE_BACKEND=blobs).');
+};
+async function getPlatformSetting() { return null; }
+async function savePlatformSetting() { needsSupabase(); }
+async function getWorkspaceStudio() { return { enabled: false, budget: 0, brandKit: null }; }
+async function setWorkspaceStudio() { needsSupabase(); }
+async function addStudioSpend() { needsSupabase(); }
+async function getMonthSpend() { return 0; }
+async function getMonthSpendAll() { return {}; }
+async function createStudioJob() { needsSupabase(); }
+async function getStudioJobById() { return null; }
+async function updateStudioJob() { needsSupabase(); }
+async function listStudioJobs() { return []; }
 async function getWorkspaceById() {
   return null;
 }
@@ -261,6 +275,17 @@ module.exports = {
   saveMetricsConfig,
   workspaceOwnerEmail,
   isPlatformAdmin,
+  getPlatformSetting,
+  savePlatformSetting,
+  getWorkspaceStudio,
+  setWorkspaceStudio,
+  addStudioSpend,
+  getMonthSpend,
+  getMonthSpendAll,
+  createStudioJob,
+  getStudioJobById,
+  updateStudioJob,
+  listStudioJobs,
   getWorkspaceById,
   listAllWorkspaces,
   createWorkspace,

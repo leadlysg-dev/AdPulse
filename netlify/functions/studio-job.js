@@ -1,23 +1,24 @@
-// Poll one job. Each call is one tick of the state machine: settle any
-// finished fal requests, submit each placement's next step, and save.
-// The browser polls this until the job settles.
-const { getEmailFromRequest, getStudioRecord, putStudioRecord } = require('./_store');
-const { advanceJob, json } = require('./_studio');
+// One job's live state, strictly scoped to the caller's active workspace -
+// a job id from another workspace 404s. The UI polls this; per-placement
+// state (queued/generating/done/error + urls + the QA rung used) rides in
+// placements.
+const { getEmailFromRequest, getWorkspaceFromRequest, getStudioJobById } = require('./_store');
+
+const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 exports.handler = async (event) => {
   const email = getEmailFromRequest(event.headers);
-  if (!email) return { statusCode: 401, body: 'Not logged in.' };
-  const id = (event.queryStringParameters || {}).id || '';
+  if (!email) return json(401, { error: 'Not logged in.' });
   try {
-    const job = await getStudioRecord(email, 'job', id);
-    if (!job) return json(200, { error: 'No such job.' });
-    if (job.state === 'queued' || job.state === 'generating') {
-      await advanceJob(job);
-      await putStudioRecord(email, 'job', job.id, job);
-    }
-    return json(200, { job });
+    const workspace = await getWorkspaceFromRequest(event.headers, email);
+    if (!workspace.id) return json(400, { error: 'No workspace.' });
+    const id = (event.queryStringParameters || {}).id;
+    if (!id) return json(400, { error: 'Which job?' });
+    const job = await getStudioJobById(id, workspace.id);
+    if (!job) return json(404, { error: 'No such job in this workspace.' });
+    return json(200, { job: { id: job.id, status: job.status, cost: job.cost, model: job.model, templateId: job.templateId, placements: job.placements, createdAt: job.createdAt } });
   } catch (err) {
     console.error(`[studio-job] ${err.message}`);
-    return json(200, { error: err.message });
+    return json(400, { error: err.message });
   }
 };

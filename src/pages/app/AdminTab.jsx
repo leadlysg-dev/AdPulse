@@ -102,6 +102,120 @@ function NewWorkspaceModal({ onClose, onCreated }) {
   );
 }
 
+// Platform keys for Studio: encrypted server-side, never echoed back; the
+// fal balance (read with the admin key) warns amber under $10, red under $2.
+function StudioKeysCard() {
+  const { toast } = useShell();
+  const [meta, setMeta] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [values, setValues] = useState({ FAL_KEY: '', FAL_ADMIN_KEY: '', ANTHROPIC_API_KEY: '' });
+  const [busy, setBusy] = useState(false);
+
+  const load = () =>
+    api.adminStudioKeys().then((r) => {
+      setMeta(r.keys);
+      setBalance(r.balance);
+    }).catch(() => setMeta({}));
+  useEffect(() => {
+    load();
+  }, []);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.adminStudioKeysSave(values);
+      setValues({ FAL_KEY: '', FAL_ADMIN_KEY: '', ANTHROPIC_API_KEY: '' });
+      await load();
+      toast('Keys saved — encrypted at rest.');
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const balCls = balance && balance.usd != null ? (balance.usd < 2 ? 'down' : balance.usd < 10 ? 'warn-pill' : 'up') : 'flat';
+  return (
+    <div className="scard st-keys">
+      <div className="section-head" style={{ margin: '0 0 10px' }}>
+        <span className="section-title" style={{ fontSize: 14 }}>Studio keys</span>
+        {balance && balance.usd != null && (
+          <span className={`delta ${balCls === 'warn-pill' ? '' : balCls}`} style={balCls === 'warn-pill' ? { color: 'var(--amber)', background: 'var(--amber-soft)' } : undefined}>
+            fal balance ${balance.usd.toFixed(2)}
+          </span>
+        )}
+        {balance && balance.error && <span className="section-sub">balance unavailable</span>}
+      </div>
+      <p className="section-sub" style={{ marginBottom: 10 }}>
+        Encrypted server-side; only server routes proxying fal and Anthropic ever read them.
+      </p>
+      {['FAL_KEY', 'FAL_ADMIN_KEY', 'ANTHROPIC_API_KEY'].map((name) => (
+        <div key={name} className="st-key-row">
+          <span className="st-key-name">{name}</span>
+          <input
+            type="password"
+            className="budget-input"
+            style={{ flex: 1 }}
+            placeholder={meta && meta[name] && meta[name].set ? `set — ends in ${meta[name].last4}` : 'not set'}
+            value={values[name]}
+            onChange={(e) => setValues((v) => ({ ...v, [name]: e.target.value }))}
+            aria-label={name}
+          />
+        </div>
+      ))}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+        <button type="button" className="sbtn sbtn-primary sbtn-sm" disabled={busy || !Object.values(values).some((v) => v.trim())} onClick={save}>
+          {busy ? 'Saving…' : 'Save keys'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Per-row Studio controls: unlock flag + monthly credit budget + month spend.
+function StudioCell({ w, onPatched }) {
+  const { toast } = useShell();
+  const [budget, setBudget] = useState(String(w.studioBudget ?? 0));
+  const [busy, setBusy] = useState(false);
+  const patch = async (p) => {
+    setBusy(true);
+    try {
+      const r = await api.adminStudioWorkspace(w.id, p);
+      onPatched(w.id, r.studio);
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="st-ws-cell">
+      <button
+        type="button"
+        className={`switch rowswitch${w.studioEnabled ? ' on' : ''}`}
+        role="switch"
+        aria-checked={w.studioEnabled}
+        aria-label={`Studio for ${w.name}`}
+        disabled={busy}
+        onClick={() => patch({ enabled: !w.studioEnabled })}
+      />
+      <input
+        className="budget-input"
+        style={{ width: 64 }}
+        inputMode="decimal"
+        value={budget}
+        aria-label={`Studio budget for ${w.name}`}
+        onChange={(e) => setBudget(e.target.value)}
+        onBlur={() => {
+          const n = parseFloat(budget);
+          if (isFinite(n) && n >= 0 && n !== w.studioBudget) patch({ budget: n });
+        }}
+      />
+      <span className="section-sub">${(w.studioMonthSpend || 0).toFixed(2)} mo</span>
+    </div>
+  );
+}
+
 export default function AdminTab() {
   const { status, toast } = useShell();
   const [rows, setRows] = useState(null);
@@ -149,11 +263,16 @@ export default function AdminTab() {
     }
   };
 
+  const patchStudio = (id, studio) =>
+    setRows((cur) => cur.map((w) => (w.id === id ? { ...w, studioEnabled: studio.enabled, studioBudget: studio.budget, studioMonthSpend: studio.monthSpend } : w)));
+
   if (status && !status.isPlatformAdmin) return null;
 
   return (
     <>
-      <div className="toolbar" style={{ marginBottom: 10 }}>
+      <StudioKeysCard />
+
+      <div className="toolbar" style={{ margin: '14px 0 10px' }}>
         <div className="pb-input" style={{ flex: '0 1 260px' }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search workspaces…" aria-label="Search workspaces" />
         </div>
@@ -185,13 +304,14 @@ export default function AdminTab() {
                     Last activity{sort.col === 'lastActivity' && <span className="dir">{sort.dir === 'desc' ? '↓' : '↑'}</span>}
                   </th>
                   <th>Mode</th>
+                  <th>Studio</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {visible.length === 0 && (
                   <tr>
-                    <td className="pin" colSpan={7}>
+                    <td className="pin" colSpan={8}>
                       <span className="section-sub">No workspaces match this search.</span>
                     </td>
                   </tr>
@@ -213,6 +333,9 @@ export default function AdminTab() {
                     <td>{fmtDate(w.lastActivity)}</td>
                     <td>
                       <span className={`pill ${w.managed ? 'live' : 'paused'}`}>{w.managed ? 'Managed' : 'Self-serve'}</span>
+                    </td>
+                    <td>
+                      <StudioCell w={w} onPatched={patchStudio} />
                     </td>
                     <td>
                       <button type="button" className="sbtn sbtn-ghost sbtn-sm" disabled={entering === w.id} onClick={() => enter(w)}>

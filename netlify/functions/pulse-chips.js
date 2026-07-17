@@ -4,7 +4,7 @@
 // spec colour classes. Any failure falls back to the four spec defaults.
 const fetch = require('node-fetch');
 const { getEmailFromRequest, getUser, getStudioRecord, putStudioRecord, getWorkspaceFromRequest, getMetricsConfig } = require('./_store');
-const { parseJson } = require('./_studio');
+const { parseJson } = require('./_json');
 
 const MODEL = 'claude-haiku-4-5';
 const MOCK = process.env.STUDIO_MOCK === '1';

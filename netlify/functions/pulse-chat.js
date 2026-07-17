@@ -9,7 +9,7 @@
 // own gen-object answers.
 const fetch = require('node-fetch');
 const { getEmailFromRequest, getWorkspaceFromRequest } = require('./_store');
-const { parseJson } = require('./_studio');
+const { parseJson } = require('./_json');
 
 const MODEL = 'claude-haiku-4-5';
 const MOCK = process.env.STUDIO_MOCK === '1';

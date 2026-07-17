@@ -222,47 +222,28 @@ export const api = {
 
   changeRequestList: () => request('/.netlify/functions/change-request'),
 
-  studioInit: () => request('/.netlify/functions/studio-init'),
+  studioConfig: () => request('/.netlify/functions/studio-config'),
 
-  studioBalance: () => request('/.netlify/functions/studio-balance'),
-
-  studioJobs: (project) =>
-    request(`/.netlify/functions/studio-jobs?project=${encodeURIComponent(project || '')}`),
+  studioGenerate: (payload) =>
+    request('/.netlify/functions/studio-generate', { method: 'POST', body: JSON.stringify(payload) }),
 
   studioJob: (id) => request(`/.netlify/functions/studio-job?id=${encodeURIComponent(id)}`),
 
-  studioCreate: (body) =>
-    request('/.netlify/functions/studio-create', { method: 'POST', body: JSON.stringify(body) }),
+  studioGallery: () => request('/.netlify/functions/studio-gallery'),
 
-  studioRetry: (jobId, placement) =>
-    request('/.netlify/functions/studio-retry', {
+  studioAsset: (payload) =>
+    request('/.netlify/functions/studio-asset', { method: 'POST', body: JSON.stringify(payload) }),
+
+  adminStudioKeys: () => request('/.netlify/functions/admin-studio-keys'),
+
+  adminStudioKeysSave: (keys) =>
+    request('/.netlify/functions/admin-studio-keys', { method: 'POST', body: JSON.stringify({ keys }) }),
+
+  adminStudioWorkspace: (workspaceId, patch) =>
+    request('/.netlify/functions/admin-studio-workspace', {
       method: 'POST',
-      body: JSON.stringify({ jobId, placement })
+      body: JSON.stringify({ workspaceId, ...patch })
     }),
-
-  studioEdit: (body) =>
-    request('/.netlify/functions/studio-edit', { method: 'POST', body: JSON.stringify(body) }),
-
-  studioChain: (id) => request(`/.netlify/functions/studio-chain?id=${encodeURIComponent(id)}`),
-
-  studioAnimate: (body) =>
-    request('/.netlify/functions/studio-animate', { method: 'POST', body: JSON.stringify(body) }),
-
-  studioMotion: (id) => request(`/.netlify/functions/studio-motion?id=${encodeURIComponent(id)}`),
-
-  studioExpand: (body) =>
-    request('/.netlify/functions/studio-expand', { method: 'POST', body: JSON.stringify(body) }),
-
-  studioExpandEdit: (body) =>
-    request('/.netlify/functions/studio-expand-edit', { method: 'POST', body: JSON.stringify(body) }),
-
-  studioUpload: (files, target) =>
-    request('/.netlify/functions/studio-upload', {
-      method: 'POST',
-      body: JSON.stringify({ files, target })
-    }),
-
-  studioLibrary: () => request('/.netlify/functions/studio-library'),
 
   listAlerts: () => request('/.netlify/functions/list-alerts'),
 

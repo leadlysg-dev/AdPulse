@@ -276,6 +276,132 @@ async function workspaceOwnerEmail(workspaceId) {
   return data && data.users ? data.users.email : null;
 }
 
+// ---- Studio: platform keys, budgets, spend ledger, jobs ----
+
+async function getPlatformSetting(key) {
+  const { data, error } = await db().from('platform_settings').select('value').eq('key', key).maybeSingle();
+  if (error) fail(error, 'loading a platform setting');
+  return data ? data.value : null;
+}
+
+async function savePlatformSetting(key, value) {
+  const { error } = await db().from('platform_settings').upsert({ key, value, updated_at: new Date().toISOString() });
+  if (error) fail(error, 'saving a platform setting');
+}
+
+async function getWorkspaceStudio(workspaceId) {
+  const { data, error } = await db()
+    .from('workspaces')
+    .select('studio_enabled, studio_budget, brand_kit')
+    .eq('id', workspaceId)
+    .maybeSingle();
+  if (error) fail(error, 'loading studio settings');
+  return data
+    ? { enabled: !!data.studio_enabled, budget: Number(data.studio_budget || 0), brandKit: data.brand_kit || null }
+    : { enabled: false, budget: 0, brandKit: null };
+}
+
+async function setWorkspaceStudio(workspaceId, patch) {
+  const row = {};
+  if (patch.enabled !== undefined) row.studio_enabled = !!patch.enabled;
+  if (patch.budget !== undefined) row.studio_budget = Number(patch.budget) || 0;
+  if (patch.brandKit !== undefined) row.brand_kit = patch.brandKit;
+  const { error } = await db().from('workspaces').update(row).eq('id', workspaceId);
+  if (error) fail(error, 'saving studio settings');
+}
+
+const monthStartIso = () => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+};
+
+async function addStudioSpend(workspaceId, jobId, amount, note) {
+  const { error } = await db().from('studio_spend').insert({ workspace_id: workspaceId, job_id: jobId, amount, note: note || null });
+  if (error) fail(error, 'recording studio spend');
+}
+
+async function getMonthSpend(workspaceId) {
+  const { data, error } = await db()
+    .from('studio_spend')
+    .select('amount')
+    .eq('workspace_id', workspaceId)
+    .gte('created_at', monthStartIso());
+  if (error) fail(error, 'loading studio spend');
+  return +(data || []).reduce((a, r) => a + Number(r.amount || 0), 0).toFixed(2);
+}
+
+async function getMonthSpendAll() {
+  const { data, error } = await db().from('studio_spend').select('workspace_id, amount').gte('created_at', monthStartIso());
+  if (error) fail(error, 'loading studio spend');
+  const by = {};
+  (data || []).forEach((r) => {
+    by[r.workspace_id] = +((by[r.workspace_id] || 0) + Number(r.amount || 0)).toFixed(2);
+  });
+  return by;
+}
+
+async function createStudioJob(row) {
+  const { data, error } = await db()
+    .from('studio_jobs')
+    .insert({
+      workspace_id: row.workspaceId,
+      created_by: row.createdBy || null,
+      status: row.status || 'queued',
+      cost: row.cost || 0,
+      model: row.model || null,
+      template_id: row.templateId || null,
+      spec: row.spec || null,
+      inputs: row.inputs || null,
+      placements: row.placements || null
+    })
+    .select('id')
+    .single();
+  if (error) fail(error, 'creating the studio job');
+  return data.id;
+}
+
+const jobRow = (d) =>
+  d && {
+    id: d.id,
+    workspaceId: d.workspace_id,
+    status: d.status,
+    cost: Number(d.cost || 0),
+    model: d.model,
+    templateId: d.template_id,
+    spec: d.spec,
+    inputs: d.inputs,
+    placements: d.placements || {},
+    createdAt: d.created_at,
+    updatedAt: d.updated_at
+  };
+
+async function getStudioJobById(jobId, workspaceId) {
+  const q = db().from('studio_jobs').select('*').eq('id', jobId);
+  const { data, error } = await (workspaceId ? q.eq('workspace_id', workspaceId) : q).maybeSingle();
+  if (error) fail(error, 'loading the studio job');
+  return jobRow(data);
+}
+
+async function updateStudioJob(jobId, patch) {
+  const row = { updated_at: new Date().toISOString() };
+  if (patch.status !== undefined) row.status = patch.status;
+  if (patch.spec !== undefined) row.spec = patch.spec;
+  if (patch.placements !== undefined) row.placements = patch.placements;
+  const { error } = await db().from('studio_jobs').update(row).eq('id', jobId);
+  if (error) fail(error, 'updating the studio job');
+}
+
+async function listStudioJobs(workspaceId, limit = 20) {
+  const { data, error } = await db()
+    .from('studio_jobs')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) fail(error, 'listing studio jobs');
+  return (data || []).map(jobRow);
+}
+
 // Platform-level role check: is this user a Leadly platform admin?
 async function isPlatformAdmin(email) {
   try {
@@ -302,7 +428,7 @@ async function getWorkspaceById(workspaceId) {
 // connection health (through the owner's connections), and last activity.
 async function listAllWorkspaces() {
   const [wsRes, memberRes, connRes, crRes] = await Promise.all([
-    db().from('workspaces').select('id, name, billing_exempt, managed, created_at').order('created_at', { ascending: true }),
+    db().from('workspaces').select('*').order('created_at', { ascending: true }),
     db().from('workspace_members').select('workspace_id, role, created_at, users ( id, email )'),
     db().from('connected_accounts').select('user_id, provider, selected_ad_account_id'),
     db().from('change_requests').select('workspace_id, created_at').order('created_at', { ascending: false }).limit(500)
@@ -337,6 +463,8 @@ async function listAllWorkspaces() {
       memberCount: members.length,
       meta: conns.meta === true ? 'ok' : conns.meta === false ? 'partial' : 'off',
       google: conns.google === true ? 'ok' : conns.google === false ? 'partial' : 'off',
+      studioEnabled: w.studio_enabled === true,
+      studioBudget: Number(w.studio_budget || 0),
       lastActivity: activity[activity.length - 1] || w.created_at
     };
   });
@@ -812,6 +940,17 @@ module.exports = {
   saveMetricsConfig,
   workspaceOwnerEmail,
   isPlatformAdmin,
+  getPlatformSetting,
+  savePlatformSetting,
+  getWorkspaceStudio,
+  setWorkspaceStudio,
+  addStudioSpend,
+  getMonthSpend,
+  getMonthSpendAll,
+  createStudioJob,
+  getStudioJobById,
+  updateStudioJob,
+  listStudioJobs,
   getWorkspaceById,
   listAllWorkspaces,
   createWorkspace,
