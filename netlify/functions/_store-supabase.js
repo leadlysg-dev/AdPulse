@@ -386,17 +386,6 @@ async function saveMetricsConfig(workspaceId, config) {
   if (error) fail(error, 'saving metrics config');
 }
 
-async function getTrackedMetrics(workspaceId) {
-  const { data, error } = await db().from('workspaces').select('tracked_metrics').eq('id', workspaceId).maybeSingle();
-  if (error) fail(error, 'loading tracked metrics');
-  return (data && data.tracked_metrics) || null;
-}
-
-async function saveTrackedMetrics(workspaceId, metrics) {
-  const { error } = await db().from('workspaces').update({ tracked_metrics: metrics }).eq('id', workspaceId);
-  if (error) fail(error, 'saving tracked metrics');
-}
-
 // --- Leadly Studio records (jobs, chains, motion runs, uploads, docs, brands) ---
 // One generic JSON-document table (see migration 010): every Studio concept
 // is a small blob read back whole, by id or newest-first, always per-user.
@@ -662,8 +651,6 @@ module.exports = {
   putStudioRecord,
   listStudioRecords,
   listMemberships,
-  getTrackedMetrics,
-  saveTrackedMetrics,
   getMetricsConfig,
   saveMetricsConfig,
   workspaceOwnerEmail,

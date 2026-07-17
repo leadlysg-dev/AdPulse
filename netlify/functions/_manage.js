@@ -51,6 +51,11 @@ async function withBackoff(fn) {
 const centsToDollars = (v) => (v == null || v === '' ? null : +(Number(v) / 100).toFixed(2));
 const dollarsToCents = (v) => Math.round(Number(v) * 100);
 
+// Meta extras the master metrics config can switch on; reach rides as an
+// insights field, the rest are action types read alongside the selected
+// conversion events, so every nesting level carries the full column set.
+const META_EXTRA_ACTIONS = ['video_view', 'video_thruplay_watched', 'post_engagement'];
+
 function metaRowMetrics(entity, metricIds, primaryId) {
   const ins = (entity.insights && entity.insights.data && entity.insights.data[0]) || {};
   const r = readRow(ins, metricIds);
@@ -59,18 +64,21 @@ function metaRowMetrics(entity, metricIds, primaryId) {
     spend: +r.spend.toFixed(2),
     impressions: r.impressions,
     clicks: r.clicks,
+    reach: parseInt(ins.reach || 0, 10) || null,
     ctr: r.impressions > 0 ? +((r.clicks / r.impressions) * 100).toFixed(2) : null,
     cpc: r.clicks > 0 ? +(r.spend / r.clicks).toFixed(2) : null,
     conversions,
     cpa: conversions > 0 ? +(r.spend / conversions).toFixed(2) : null,
-    roas: r.spend > 0 && r.revenue > 0 ? +(r.revenue / r.spend).toFixed(2) : null
+    roas: r.spend > 0 && r.revenue > 0 ? +(r.revenue / r.spend).toFixed(2) : null,
+    events: r.values
   };
 }
 
 async function metaTree(meta, since, until) {
-  const primary = getSelectedMetrics(meta)[0];
-  const metricIds = [primary.id];
-  const insights = `insights.time_range({"since":"${since}","until":"${until}"}){spend,impressions,clicks,actions,action_values}`;
+  const selected = getSelectedMetrics(meta);
+  const primary = selected[0];
+  const metricIds = [...selected.map((m) => m.id), ...META_EXTRA_ACTIONS];
+  const insights = `insights.time_range({"since":"${since}","until":"${until}"}){spend,impressions,clicks,reach,actions,action_values}`;
   const base = { time: 'x', access_token: meta.accessToken, limit: 200 };
   const [campaigns, adsets, ads] = await Promise.all([
     metaGet(`${meta.selectedAdAccountId}/campaigns`, {
@@ -166,6 +174,40 @@ const microsToDollars = (v) => (v == null ? null : +(Number(v) / 1e6).toFixed(2)
 const dollarsToMicros = (v) => Math.round(Number(v) * 1e6);
 
 const gMetrics = 'metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.conversions_value';
+
+// Per-entity counts of each selected conversion action, one query per
+// nesting level. Returns entityId -> { actionResourceName: count }.
+async function googleEventMaps(google, cid, during, opts) {
+  const selected = google.selectedMetrics || [];
+  if (!selected.length) return { campaign: {}, adgroup: {}, ad: {}, primaryId: null };
+  const wanted = new Set(selected.map((m) => m.id));
+  const q = (from, idField) =>
+    `SELECT ${idField}, segments.conversion_action, metrics.all_conversions FROM ${from} WHERE ${during}`;
+  const [camps, groups, ads] = await Promise.all([
+    gadsSearch(google, cid, q('campaign', 'campaign.id'), opts),
+    gadsSearch(google, cid, q('ad_group', 'ad_group.id'), opts),
+    gadsSearch(google, cid, q('ad_group_ad', 'ad_group_ad.ad.id, ad_group.id'), opts)
+  ]);
+  const collect = (results, idOf) => {
+    const map = {};
+    results.forEach((row) => {
+      const action = row.segments && row.segments.conversionAction;
+      if (!action || !wanted.has(action)) return;
+      const id = idOf(row);
+      if (!id) return;
+      const slot = (map[id] = map[id] || {});
+      slot[action] = +((slot[action] || 0) + Number((row.metrics || {}).allConversions || 0)).toFixed(1);
+    });
+    return map;
+  };
+  return {
+    campaign: collect(camps.results, (r) => String((r.campaign || {}).id || '')),
+    adgroup: collect(groups.results, (r) => String((r.adGroup || {}).id || '')),
+    ad: collect(ads.results, (r) => String(((r.adGroupAd || {}).ad || {}).id || '')),
+    primaryId: selected[0].id
+  };
+}
+
 function googleRowMetrics(m = {}) {
   const spend = Number(m.costMicros || 0) / 1e6;
   const clicks = parseInt(m.clicks || 0, 10);
@@ -189,11 +231,28 @@ async function googleTree(google, since, until) {
   const account = (google.adAccounts || []).find((a) => a.id === cid);
   const opts = { loginCustomerId: account && account.loginCustomerId };
   const during = `segments.date BETWEEN '${since}' AND '${until}'`;
-  const [camps, groups, adsRes] = await Promise.all([
+  const [camps, groups, adsRes, eventMaps] = await Promise.all([
     gadsSearch(google, cid, `SELECT campaign.id, campaign.name, campaign.status, campaign.campaign_budget, campaign.bidding_strategy_type, campaign_budget.amount_micros, ${gMetrics} FROM campaign WHERE campaign.status != 'REMOVED' AND ${during}`, opts),
     gadsSearch(google, cid, `SELECT ad_group.id, ad_group.name, ad_group.status, ad_group.cpc_bid_micros, ad_group.target_cpa_micros, campaign.id, ${gMetrics} FROM ad_group WHERE ad_group.status != 'REMOVED' AND ${during}`, opts),
-    gadsSearch(google, cid, `SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.status, ad_group.id, campaign.id, ${gMetrics} FROM ad_group_ad WHERE ad_group_ad.status != 'REMOVED' AND ${during}`, opts)
+    gadsSearch(google, cid, `SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.status, ad_group.id, campaign.id, ${gMetrics} FROM ad_group_ad WHERE ad_group_ad.status != 'REMOVED' AND ${during}`, opts),
+    googleEventMaps(google, cid, during, opts).catch((err) => {
+      console.error(`[googleTree] event maps failed: ${err.message}`);
+      return { campaign: {}, adgroup: {}, ad: {}, primaryId: null };
+    })
   ]);
+
+  // With a mapped primary result, the headline conversions/cpa columns count
+  // THAT action - not Google's blended "conversions" metric.
+  const withEvents = (metrics, level, id) => {
+    const events = eventMaps[level][id] || {};
+    const out = { ...metrics, events };
+    if (eventMaps.primaryId) {
+      const conversions = +(events[eventMaps.primaryId] || 0).toFixed(1);
+      out.conversions = conversions;
+      out.cpa = conversions > 0 ? +(metrics.spend / conversions).toFixed(2) : null;
+    }
+    return out;
+  };
 
   const status = (s) => (s === 'ENABLED' ? 'active' : 'paused');
   const campaignNodes = new Map();
@@ -209,7 +268,7 @@ async function googleTree(google, since, until) {
       editableBudget: true,
       budgetResource: c.campaignBudget,
       biddingStrategy: c.biddingStrategyType,
-      metrics: googleRowMetrics(row.metrics),
+      metrics: withEvents(googleRowMetrics(row.metrics), 'campaign', String(c.id)),
       children: []
     });
   });
@@ -227,7 +286,7 @@ async function googleTree(google, since, until) {
       bid: g.cpcBidMicros ? microsToDollars(g.cpcBidMicros) : g.targetCpaMicros ? microsToDollars(g.targetCpaMicros) : null,
       bidKind: g.cpcBidMicros ? 'cpc' : g.targetCpaMicros ? 'target_cpa' : null,
       editableBid: !!(g.cpcBidMicros || g.targetCpaMicros),
-      metrics: googleRowMetrics(row.metrics),
+      metrics: withEvents(googleRowMetrics(row.metrics), 'adgroup', String(g.id)),
       children: []
     };
     groupNodes.set(String(g.id), n);
@@ -244,12 +303,13 @@ async function googleTree(google, since, until) {
         name: ad.name || `Ad ${ad.id}`,
         status: status(row.adGroupAd.status),
         effectiveStatus: row.adGroupAd.status,
-        metrics: googleRowMetrics(row.metrics),
+        metrics: withEvents(googleRowMetrics(row.metrics), 'ad', String(ad.id)),
         children: []
       });
     }
   });
-  return { primaryMetric: 'Conversions', campaigns: [...campaignNodes.values()] };
+  const primaryLabel = (google.selectedMetrics || [])[0];
+  return { primaryMetric: primaryLabel ? primaryLabel.label : 'Conversions', campaigns: [...campaignNodes.values()] };
 }
 
 // Google entity lookup for a write: verifies it exists on THIS customer and

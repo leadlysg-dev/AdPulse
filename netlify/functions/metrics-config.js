@@ -2,9 +2,34 @@
 // re-run only from Settings. Shape documented in migration 013. Defaults
 // (Spend, CPM, Impressions, Ad Clicks, CTR, CPC) are always on client-side
 // and never stored here.
-const { getEmailFromRequest, getWorkspaceFromRequest, getMetricsConfig, saveMetricsConfig } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, getMetricsConfig, saveMetricsConfig, getUser, saveUser } = require('./_store');
 
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+// Keep each connection's selected_metrics in lockstep with the config:
+// primary result first (get-report and get-manage-tree treat metrics[0] as
+// the headline), then every other chosen conversion for that platform. A
+// platform with nothing chosen keeps whatever it had.
+async function syncConnections(email, config) {
+  const user = await getUser(email);
+  if (!user) return;
+  let changed = false;
+  for (const platform of ['meta', 'google']) {
+    const conn = user.accounts && user.accounts[platform];
+    if (!conn) continue;
+    const list = [];
+    const prim = config.primaryResult[platform];
+    if (prim) list.push({ id: prim.event, label: prim.label || prim.event });
+    for (const cv of config.conversions.filter((c) => c.platform === platform)) {
+      if (!list.some((m) => m.id === cv.id)) list.push({ id: cv.id, label: cv.label });
+    }
+    if (list.length) {
+      conn.selectedMetrics = list;
+      changed = true;
+    }
+  }
+  if (changed) await saveUser(user);
+}
 
 exports.handler = async (event) => {
   const email = getEmailFromRequest(event.headers);
@@ -16,6 +41,7 @@ exports.handler = async (event) => {
       return json(200, { config: config || null });
     }
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed.' };
+    if (workspace.role === 'client') return json(403, { error: 'Metrics setup is managed by Leadly for this workspace.' });
     const body = JSON.parse(event.body || '{}');
     const c = body.config;
     if (!c || typeof c !== 'object' || !c.primaryResult || !c.primaryResult.name) {
@@ -35,6 +61,7 @@ exports.handler = async (event) => {
     };
     if (!workspace.id) return json(400, { error: 'No workspace - run migration 011 first.' });
     await saveMetricsConfig(workspace.id, config);
+    await syncConnections(email, config).catch((err) => console.error(`[metrics-config] sync failed: ${err.message}`));
     return json(200, { ok: true, config });
   } catch (err) {
     console.error(`[metrics-config] ${err.message}`);

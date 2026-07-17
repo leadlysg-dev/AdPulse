@@ -166,14 +166,6 @@ async function saveMetricsConfig(_, config) {
   blobMetricsConfig = config;
 }
 
-let blobTracked = null; // single-tenant fallback: kept in the store blob namespace
-async function getTrackedMetrics() {
-  return blobTracked;
-}
-async function saveTrackedMetrics(_, metrics) {
-  blobTracked = metrics;
-}
-
 // --- Alert rules: stored as an array on the user blob ---
 
 async function withUser(email, mutate) {
@@ -234,8 +226,6 @@ module.exports = {
   putStudioRecord,
   listStudioRecords,
   listMemberships,
-  getTrackedMetrics,
-  saveTrackedMetrics,
   getMetricsConfig,
   saveMetricsConfig,
   workspaceOwnerEmail,
