@@ -354,6 +354,28 @@ body::before,body::after{content:none}
 .mp-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .mp-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;border-top:1px solid var(--line-soft);padding-top:14px}
 
+/* ── Metrics onboarding: bolder, clearer ─────────────── */
+.mo-card{max-width:640px}
+.mo-step{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--cobalt)}
+.mo-title{font-size:20px;font-weight:800;letter-spacing:-.01em;margin-top:6px}
+.mo-sub{font-size:13.5px;line-height:1.55;color:var(--ink-soft);margin-top:6px}
+.mo-sub b{color:var(--ink);font-weight:700}
+.mo-chip{font-size:13.5px;font-weight:700;padding:9px 14px}
+.mo-platform{margin-top:16px}
+.mo-plat-head{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.mo-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.mo-row{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:9px 12px;background:var(--surface)}
+.mo-row.on{border-color:var(--cobalt);background:var(--cobalt-soft)}
+.mo-tick{display:flex;align-items:center;gap:10px;flex:1;min-width:0;font:inherit;background:none;border:none;padding:0;cursor:pointer;text-align:left;color:var(--ink)}
+.mo-label{font-size:14px;font-weight:700}
+.mo-count{font-size:11.5px;font-weight:600;color:var(--ink-faint);white-space:nowrap}
+.mo-star{font:inherit;font-size:12px;font-weight:800;color:var(--ink-faint);background:var(--surface);border:1.5px solid var(--line);border-radius:99px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+.mo-star:hover{border-color:var(--cobalt);color:var(--cobalt)}
+.mo-star.on{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
+.mo-name-label{display:block;font-size:14px;font-weight:800;margin-top:18px}
+.mo-name{width:240px;margin-top:8px;font-size:15px;font-weight:700}
+.mo-error{font-size:13px;font-weight:700;color:var(--red);margin-top:12px}
+
 /* ── Scrollable tables, pinned first column, sorting ─ */
 .table-scroll{overflow-x:auto}
 .table-scroll .spec-table{min-width:100%}

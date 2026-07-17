@@ -65,6 +65,13 @@ exports.handler = async (event) => {
     return json(200, { ok: true, config });
   } catch (err) {
     console.error(`[metrics-config] ${err.message}`);
+    // The one setup step this can't survive: the column doesn't exist yet.
+    if (/metrics_config.*(column|schema cache)/i.test(err.message)) {
+      return json(400, {
+        error:
+          "One database update is missing: open Supabase → SQL editor and run supabase-migrations/013-metrics-config.sql (a single ALTER TABLE), then press Finish setup again."
+      });
+    }
     return json(400, { error: err.message });
   }
 };
