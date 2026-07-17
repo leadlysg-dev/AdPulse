@@ -1,6 +1,6 @@
 // The Manage tab's entity browser: campaigns -> ad sets / ad groups -> ads
 // for the selected date range, plus whether this connection can write.
-const { getEmailFromRequest, getUser, saveUser } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, getDataUser, saveUser } = require('./_store');
 const { VALID_RANGES, resolveRange, resolveCustomRange } = require('./_dates');
 const { metaTree, googleTree, BUDGET_CEILING, GUARDRAIL_PCT } = require('./_manage');
 const fetch = require('node-fetch');
@@ -14,7 +14,8 @@ const json = (statusCode, body) => ({
 exports.handler = async (event) => {
   const email = getEmailFromRequest(event.headers);
   if (!email) return json(401, { error: 'Not logged in.' });
-  const user = await getUser(email);
+  const workspace = await getWorkspaceFromRequest(event.headers, email);
+  const user = await getDataUser(email, workspace);
   if (!user) return json(401, { error: 'Not logged in.' });
 
   const qs = event.queryStringParameters || {};

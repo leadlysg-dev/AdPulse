@@ -12,6 +12,9 @@
 create extension if not exists pgcrypto;
 
 -- ── 1 · Drop everything ─────────────────────────────────────────────────
+drop table if exists public.user_roles        cascade;
+drop table if exists public.admin_sessions     cascade;
+drop table if exists public.audit_log          cascade;
 drop table if exists public.workspace_invites  cascade;
 drop table if exists public.change_requests    cascade;
 drop table if exists public.workspace_members  cascade;
@@ -49,7 +52,7 @@ create table public.workspaces (
 create table public.workspace_members (
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
   user_id      uuid not null references public.users(id) on delete cascade,
-  role         text not null check (role in ('owner', 'client')),
+  role         text not null check (role in ('owner', 'agency', 'client', 'member')),
   created_at   timestamptz not null default now(),
   primary key (workspace_id, user_id)
 );
@@ -61,7 +64,8 @@ create table public.workspace_invites (
   used_by      uuid references public.users(id),
   used_at      timestamptz,
   created_at   timestamptz not null default now(),
-  expires_at   timestamptz not null default now() + interval '14 days'
+  role         text not null default 'client' check (role in ('owner', 'agency', 'client', 'member')),
+  expires_at   timestamptz not null default now() + interval '7 days'
 );
 
 create table public.change_requests (
@@ -186,6 +190,31 @@ create index studio_records_recent_idx                on public.studio_records (
 -- ── 7 · RLS: deny-all to the anon key (the app uses the service key) ────
 alter table public.users              enable row level security;
 alter table public.workspaces         enable row level security;
+-- Platform admin (migration 014)
+create table public.user_roles (
+  user_id    uuid primary key references public.users(id) on delete cascade,
+  role       text not null check (role in ('platform_admin')),
+  created_at timestamptz not null default now()
+);
+create table public.admin_sessions (
+  id            bigint generated always as identity primary key,
+  admin_user_id uuid not null references public.users(id) on delete cascade,
+  workspace_id  uuid not null references public.workspaces(id) on delete cascade,
+  started_at    timestamptz not null default now(),
+  ended_at      timestamptz
+);
+create table public.audit_log (
+  id            bigint generated always as identity primary key,
+  actor_user_id uuid references public.users(id),
+  action        text not null,
+  workspace_id  uuid references public.workspaces(id),
+  detail        jsonb,
+  created_at    timestamptz not null default now()
+);
+alter table public.user_roles      enable row level security;
+alter table public.admin_sessions  enable row level security;
+alter table public.audit_log       enable row level security;
+
 alter table public.workspace_members  enable row level security;
 alter table public.workspace_invites  enable row level security;
 alter table public.change_requests    enable row level security;
@@ -225,6 +254,8 @@ begin
   values ('Leadly (Agency)', true)
   returning id into ws;
 
+  insert into public.user_roles (user_id, role) values (uid, 'platform_admin')
+    on conflict do nothing;
   insert into public.workspace_members (workspace_id, user_id, role)
   values (ws, uid, 'owner');
 end $$;

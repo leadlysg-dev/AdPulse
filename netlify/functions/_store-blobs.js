@@ -146,6 +146,37 @@ async function createWorkspaceInvite() {
   throw new Error('Workspaces and invites require the Supabase backend (unset STORAGE_BACKEND=blobs).');
 }
 
+// Platform admin needs the relational backend.
+async function isPlatformAdmin() {
+  return false;
+}
+async function getWorkspaceById() {
+  return null;
+}
+async function listAllWorkspaces() {
+  throw new Error('The admin directory requires the Supabase backend (unset STORAGE_BACKEND=blobs).');
+}
+async function createWorkspace() {
+  throw new Error('Creating workspaces requires the Supabase backend (unset STORAGE_BACKEND=blobs).');
+}
+async function createAdminSession() {
+  throw new Error('Admin sessions require the Supabase backend (unset STORAGE_BACKEND=blobs).');
+}
+async function endAdminSessions() {}
+async function writeAudit() {}
+async function listWorkspaceMembers() {
+  return [];
+}
+async function addWorkspaceMember() {
+  throw new Error('Members require the Supabase backend (unset STORAGE_BACKEND=blobs).');
+}
+async function removeWorkspaceMember() {
+  throw new Error('Members require the Supabase backend (unset STORAGE_BACKEND=blobs).');
+}
+async function getWorkspaceInvite() {
+  return null;
+}
+
 async function acceptWorkspaceInvite() {
   throw new Error('Workspaces and invites require the Supabase backend (unset STORAGE_BACKEND=blobs).');
 }
@@ -229,6 +260,17 @@ module.exports = {
   getMetricsConfig,
   saveMetricsConfig,
   workspaceOwnerEmail,
+  isPlatformAdmin,
+  getWorkspaceById,
+  listAllWorkspaces,
+  createWorkspace,
+  createAdminSession,
+  endAdminSessions,
+  writeAudit,
+  listWorkspaceMembers,
+  addWorkspaceMember,
+  removeWorkspaceMember,
+  getWorkspaceInvite,
   createWorkspaceInvite,
   acceptWorkspaceInvite,
   createChangeRequest,

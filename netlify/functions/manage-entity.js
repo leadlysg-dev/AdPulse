@@ -1,6 +1,6 @@
 // One validated, guardrailed, audited write: pause/enable, budget, or bid.
 // POST { channel, entityType, entityId, action, value, acknowledged }.
-const { getEmailFromRequest, getUser, createChangeLog } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, getDataUser, createChangeLog } = require('./_store');
 const { executeWrite } = require('./_manage');
 
 const json = (statusCode, body) => ({
@@ -44,7 +44,14 @@ exports.handler = async (event) => {
   const invalid = validate(input);
   if (invalid) return json(400, { error: invalid });
 
-  const user = await getUser(email);
+  // Writes act through the workspace owner's tokens for agency/admin
+  // visitors; clients never reach here (their controls are locked, and the
+  // role check below is the server-side guarantee).
+  const workspace = await getWorkspaceFromRequest(event.headers, email);
+  if (workspace.role === 'client' || workspace.role === 'member') {
+    return json(403, { error: 'Your campaigns are managed by Leadly — ask Pulse to request a change.' });
+  }
+  const user = await getDataUser(email, workspace);
   if (!user) return json(401, { error: 'Not logged in.' });
 
   try {

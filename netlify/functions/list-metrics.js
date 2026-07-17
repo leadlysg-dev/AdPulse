@@ -3,7 +3,7 @@
 // conversions (deduped across Meta's action-type aliases) plus the
 // account's custom conversions - engagement metrics never appear. Counts
 // come from the account's last 90 days of insights.
-const { getEmailFromRequest, getUser } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, getDataUser } = require('./_store');
 const { fmt, addDays } = require('./_dates');
 const { metaGet } = require('./_meta');
 const { getSelectedMetrics, canonicalKeyFor, buildCatalogGroups } = require('./_metrics');
@@ -47,7 +47,7 @@ exports.handler = async (event) => {
   const provider = (event.queryStringParameters || {}).provider;
   if (!['meta', 'google'].includes(provider)) return json(400, { error: 'Unknown provider.' });
 
-  const user = await getUser(email);
+  const user = await getDataUser(email, await getWorkspaceFromRequest(event.headers, email));
 
   if (provider === 'google') {
     const google = user.accounts.google;

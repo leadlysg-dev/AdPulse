@@ -91,6 +91,44 @@ export default function Settings() {
     api.metricsConfig().then((r) => setMetricsConfig(r.config)).catch(() => {});
   }, []);
 
+  // Members: owners, agency teammates, and admins manage the workspace's
+  // people here. The endpoint 403s everyone else - the section just hides.
+  const [members, setMembers] = useState(null); // null loading, false hidden
+  const [memberError, setMemberError] = useState('');
+  const [teammateEmail, setTeammateEmail] = useState('');
+  const [inviteLink, setInviteLink] = useState(null);
+  const [memberBusy, setMemberBusy] = useState(false);
+  useEffect(() => {
+    api.workspaceMembers().then((r) => setMembers(Array.isArray(r.members) ? r.members : false)).catch(() => setMembers(false));
+  }, []);
+
+  const memberAction = async (fn) => {
+    setMemberBusy(true);
+    setMemberError('');
+    try {
+      const r = await fn();
+      if (r && Array.isArray(r.members)) setMembers(r.members);
+    } catch (err) {
+      setMemberError(err.message);
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
+  const generateOwnerInvite = () =>
+    memberAction(async () => {
+      const r = await api.inviteCreate(undefined, 'owner');
+      setInviteLink(r.url);
+    });
+
+  const copyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+    } catch {
+      window.prompt('Copy this link:', inviteLink);
+    }
+  };
+
   const loadStatus = useCallback(async () => {
     setStatusError(null);
     try {
@@ -266,6 +304,85 @@ export default function Settings() {
                 {metricsSaved && <p className="settings-saved">Metrics saved — every tab now follows them.</p>}
               </div>
             </section>
+
+            {members !== false && members !== null && (
+              <section className="settings-section">
+                <h2>Members</h2>
+                <div className="card settings-card">
+                  {members.map((m) => (
+                    <div className="settings-row" key={m.email}>
+                      <div className="settings-row-copy">
+                        <span className="settings-row-label">{m.email}</span>
+                        <span className="settings-hint">
+                          {m.role === 'owner' ? 'Owner' : m.role === 'agency' ? 'Leadly team' : 'Member'}
+                        </span>
+                      </div>
+                      {m.email !== status.email && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={memberBusy}
+                          onClick={() => window.confirm(`Remove ${m.email} from this workspace?`) && memberAction(() => api.workspaceMemberRemove(m.email))}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  <div className="settings-divider" role="separator" />
+
+                  <div className="settings-row">
+                    <div className="settings-row-copy">
+                      <span className="settings-row-label">Owner invite link</span>
+                      <span className="settings-hint">Single use — expires after first use or in seven days. A fresh link replaces any unused one.</span>
+                    </div>
+                    <button type="button" className="btn btn-secondary" disabled={memberBusy} onClick={generateOwnerInvite}>
+                      Generate link
+                    </button>
+                  </div>
+                  {inviteLink && (
+                    <div className="invite-link-row">
+                      <code className="invite-link">{inviteLink}</code>
+                      <button type="button" className="btn btn-primary" onClick={copyInvite}>Copy</button>
+                    </div>
+                  )}
+
+                  <div className="settings-divider" role="separator" />
+
+                  <div className="settings-row">
+                    <div className="settings-row-copy">
+                      <span className="settings-row-label">Add a Leadly teammate</span>
+                      <span className="settings-hint">By email, with the agency role. They need a Pulse account already.</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="email"
+                        className="budget-input"
+                        style={{ width: 220 }}
+                        placeholder="teammate@leadly.sg"
+                        value={teammateEmail}
+                        onChange={(e) => setTeammateEmail(e.target.value)}
+                        aria-label="Teammate email"
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={memberBusy || !teammateEmail.trim()}
+                        onClick={() => memberAction(async () => {
+                          const r = await api.workspaceMemberAdd(teammateEmail.trim(), 'agency');
+                          setTeammateEmail('');
+                          return r;
+                        })}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                  {memberError && <p className="settings-error" role="alert">{memberError}</p>}
+                </div>
+              </section>
+            )}
 
             {(status.metaConnected || status.googleConnected) && (
               <section className="settings-section">

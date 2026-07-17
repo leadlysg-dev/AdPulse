@@ -1,10 +1,10 @@
-const { getEmailFromRequest, getUser } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, getDataUser } = require('./_store');
 
 exports.handler = async (event) => {
   const email = getEmailFromRequest(event.headers);
   if (!email) return { statusCode: 401, body: 'Not logged in.' };
 
-  const user = await getUser(email);
+  const user = await getDataUser(email, await getWorkspaceFromRequest(event.headers, email));
   const meta = user.accounts.meta || { adAccounts: [], selectedAdAccountId: null };
   const google = user.accounts.google || { adAccounts: [], selectedAdAccountId: null };
 

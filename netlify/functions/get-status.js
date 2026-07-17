@@ -1,4 +1,4 @@
-const { getEmailFromRequest, getUser, hasSetPassword } = require('./_store');
+const { getEmailFromRequest, getUser, hasSetPassword, isPlatformAdmin } = require('./_store');
 
 // Friendly name of the selected ad account on a connection, for Settings.
 function selectedAccountName(conn) {
@@ -27,6 +27,7 @@ exports.handler = async (event) => {
     body: JSON.stringify({
       loggedIn: true,
       email: user.email,
+      isPlatformAdmin: await isPlatformAdmin(user.email).catch(() => false),
       metaConnected: !!meta,
       metaNeedsPick: !!meta && meta.adAccounts.length > 1 && !meta.selectedAdAccountId,
       metaAccountName: selectedAccountName(meta),

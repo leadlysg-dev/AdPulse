@@ -276,7 +276,152 @@ async function workspaceOwnerEmail(workspaceId) {
   return data && data.users ? data.users.email : null;
 }
 
-async function createWorkspaceInvite(email, workspaceId) {
+// Platform-level role check: is this user a Leadly platform admin?
+async function isPlatformAdmin(email) {
+  try {
+    const userId = await userIdFor(email);
+    const { data, error } = await db().from('user_roles').select('role').eq('user_id', userId).maybeSingle();
+    if (error) fail(error, 'checking platform role');
+    return !!data && data.role === 'platform_admin';
+  } catch {
+    return false; // migration 014 not run yet, or no such user
+  }
+}
+
+async function getWorkspaceById(workspaceId) {
+  const { data, error } = await db()
+    .from('workspaces')
+    .select('id, name, billing_exempt, managed')
+    .eq('id', workspaceId)
+    .maybeSingle();
+  if (error) fail(error, 'loading the workspace');
+  return data ? { id: data.id, name: data.name, billingExempt: data.billing_exempt, managed: data.managed !== false } : null;
+}
+
+// The admin directory: every workspace with its owner, member count,
+// connection health (through the owner's connections), and last activity.
+async function listAllWorkspaces() {
+  const [wsRes, memberRes, connRes, crRes] = await Promise.all([
+    db().from('workspaces').select('id, name, billing_exempt, managed, created_at').order('created_at', { ascending: true }),
+    db().from('workspace_members').select('workspace_id, role, created_at, users ( id, email )'),
+    db().from('connected_accounts').select('user_id, provider, selected_ad_account_id'),
+    db().from('change_requests').select('workspace_id, created_at').order('created_at', { ascending: false }).limit(500)
+  ]);
+  for (const r of [wsRes, memberRes, connRes, crRes]) if (r.error) fail(r.error, 'loading the workspace directory');
+
+  const membersByWs = {};
+  (memberRes.data || []).forEach((m) => {
+    (membersByWs[m.workspace_id] = membersByWs[m.workspace_id] || []).push(m);
+  });
+  const connsByUser = {};
+  (connRes.data || []).forEach((c) => {
+    (connsByUser[c.user_id] = connsByUser[c.user_id] || {})[c.provider] = !!c.selected_ad_account_id;
+  });
+  const lastCrByWs = {};
+  (crRes.data || []).forEach((c) => {
+    if (!lastCrByWs[c.workspace_id]) lastCrByWs[c.workspace_id] = c.created_at;
+  });
+
+  return (wsRes.data || []).map((w) => {
+    const members = (membersByWs[w.id] || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const owner = members.find((m) => m.role === 'owner');
+    const conns = (owner && owner.users && connsByUser[owner.users.id]) || {};
+    const activity = [w.created_at, ...members.map((m) => m.created_at), lastCrByWs[w.id]].filter(Boolean).sort();
+    return {
+      id: w.id,
+      name: w.name,
+      billingExempt: w.billing_exempt,
+      managed: w.managed !== false,
+      createdAt: w.created_at,
+      ownerEmail: owner && owner.users ? owner.users.email : null,
+      memberCount: members.length,
+      meta: conns.meta === true ? 'ok' : conns.meta === false ? 'partial' : 'off',
+      google: conns.google === true ? 'ok' : conns.google === false ? 'partial' : 'off',
+      lastActivity: activity[activity.length - 1] || w.created_at
+    };
+  });
+}
+
+async function createWorkspace(name, managed) {
+  const { data, error } = await db()
+    .from('workspaces')
+    .insert({ name: String(name).slice(0, 80), managed: managed !== false })
+    .select('id, name, managed')
+    .single();
+  if (error) fail(error, 'creating the workspace');
+  return { id: data.id, name: data.name, managed: data.managed !== false };
+}
+
+// Every admin visit into a client workspace is a logged session.
+async function createAdminSession(adminEmail, workspaceId) {
+  const userId = await userIdFor(adminEmail);
+  const { data, error } = await db()
+    .from('admin_sessions')
+    .insert({ admin_user_id: userId, workspace_id: workspaceId })
+    .select('id')
+    .single();
+  if (error) fail(error, 'logging the admin session');
+  return data.id;
+}
+
+async function endAdminSessions(adminEmail) {
+  const userId = await userIdFor(adminEmail);
+  const { error } = await db()
+    .from('admin_sessions')
+    .update({ ended_at: new Date().toISOString() })
+    .eq('admin_user_id', userId)
+    .is('ended_at', null);
+  if (error) fail(error, 'ending the admin session');
+}
+
+// Best-effort audit trail; failures never block the action they describe.
+async function writeAudit(actorEmail, action, workspaceId, detail) {
+  try {
+    const userId = actorEmail ? await userIdFor(actorEmail) : null;
+    await db().from('audit_log').insert({ actor_user_id: userId, action, workspace_id: workspaceId || null, detail: detail || null });
+  } catch (err) {
+    console.error(`[store] audit write failed: ${err.message}`);
+  }
+}
+
+async function listWorkspaceMembers(workspaceId) {
+  const { data, error } = await db()
+    .from('workspace_members')
+    .select('role, created_at, users ( email )')
+    .eq('workspace_id', workspaceId)
+    .order('created_at', { ascending: true });
+  if (error) fail(error, 'loading workspace members');
+  return (data || []).map((m) => ({ email: m.users ? m.users.email : null, role: m.role, addedAt: m.created_at }));
+}
+
+async function addWorkspaceMember(workspaceId, email, role) {
+  const user = await getUser(email.toLowerCase());
+  if (!user) throw new Error('No Pulse account with that email yet — send them an invite link instead.');
+  const { error } = await db()
+    .from('workspace_members')
+    .upsert({ workspace_id: workspaceId, user_id: user.id, role }, { onConflict: 'workspace_id,user_id' });
+  if (error) fail(error, 'adding the member');
+}
+
+async function removeWorkspaceMember(workspaceId, email) {
+  const userId = await userIdFor(email.toLowerCase());
+  const { data: owners, error: oErr } = await db()
+    .from('workspace_members')
+    .select('user_id')
+    .eq('workspace_id', workspaceId)
+    .eq('role', 'owner');
+  if (oErr) fail(oErr, 'checking owners');
+  if ((owners || []).length === 1 && owners[0].user_id === userId) {
+    throw new Error("You can't remove the workspace's only owner.");
+  }
+  const { error } = await db().from('workspace_members').delete().eq('workspace_id', workspaceId).eq('user_id', userId);
+  if (error) fail(error, 'removing the member');
+}
+
+// Mint a single-use invite carrying its intended role. A fresh owner invite
+// invalidates any unused prior owner invite for the same workspace. Allowed
+// for workspace owners, agency members, and platform admins.
+async function createWorkspaceInvite(email, workspaceId, role = 'client') {
   const userId = await userIdFor(email);
   const { data: member, error: mErr } = await db()
     .from('workspace_members')
@@ -285,21 +430,57 @@ async function createWorkspaceInvite(email, workspaceId) {
     .eq('user_id', userId)
     .maybeSingle();
   if (mErr) fail(mErr, 'checking workspace role');
-  if (!member || member.role !== 'owner') throw new Error('Only a workspace owner can create invite links.');
+  const allowed = (member && (member.role === 'owner' || member.role === 'agency')) || (await isPlatformAdmin(email));
+  if (!allowed) throw new Error('Only a workspace owner or Leadly can create invite links.');
+  if (!['owner', 'agency', 'client', 'member'].includes(role)) throw new Error('Unknown invite role.');
+
+  if (role === 'owner') {
+    const { error: delErr } = await db()
+      .from('workspace_invites')
+      .delete()
+      .eq('workspace_id', workspaceId)
+      .eq('role', 'owner')
+      .is('used_by', null);
+    if (delErr) fail(delErr, 'invalidating the previous owner invite');
+  }
+
   const token = require('crypto').randomBytes(24).toString('base64url');
-  const { error } = await db()
-    .from('workspace_invites')
-    .insert({ token, workspace_id: workspaceId, created_by: userId });
+  const { error } = await db().from('workspace_invites').insert({
+    token,
+    workspace_id: workspaceId,
+    created_by: userId,
+    role,
+    expires_at: new Date(Date.now() + 7 * 86400000).toISOString()
+  });
   if (error) fail(error, 'creating the invite');
   return token;
 }
 
+// Peek at an invite without claiming it - drives the accept page's states.
+async function getWorkspaceInvite(token) {
+  const { data, error } = await db()
+    .from('workspace_invites')
+    .select('workspace_id, used_by, expires_at, role, workspaces ( name )')
+    .eq('token', token)
+    .maybeSingle();
+  if (error) fail(error, 'reading the invite');
+  if (!data) return null;
+  return {
+    workspaceId: data.workspace_id,
+    workspaceName: data.workspaces ? data.workspaces.name : null,
+    role: data.role || 'client',
+    used: !!data.used_by,
+    expired: new Date(data.expires_at) < new Date()
+  };
+}
+
 // Single use: the row is claimed with a guarded update, so two concurrent
-// accepts can't both succeed.
-async function acceptWorkspaceInvite(token, email, password) {
+// accepts can't both succeed. opts.viaGoogle creates the account without a
+// password (Google's verified email is the proof of identity).
+async function acceptWorkspaceInvite(token, email, password, opts = {}) {
   const { data: invite, error } = await db()
     .from('workspace_invites')
-    .select('workspace_id, used_by, expires_at')
+    .select('workspace_id, used_by, expires_at, role')
     .eq('token', token)
     .maybeSingle();
   if (error) fail(error, 'reading the invite');
@@ -310,7 +491,9 @@ async function acceptWorkspaceInvite(token, email, password) {
   let user = await getUser(email);
   let created = false;
   if (!user) {
-    user = await createUser(email, password);
+    user = opts.viaGoogle
+      ? await createUser(email, require('crypto').randomBytes(24).toString('hex'), { passwordSet: false })
+      : await createUser(email, password);
     created = true;
   }
 
@@ -324,14 +507,15 @@ async function acceptWorkspaceInvite(token, email, password) {
   if (claimErr) fail(claimErr, 'claiming the invite');
   if (!claimed) throw new Error('That invite link has already been used.');
 
+  const role = ['owner', 'agency', 'client', 'member'].includes(invite.role) ? invite.role : 'client';
   const { error: memberErr } = await db()
     .from('workspace_members')
     .upsert(
-      { workspace_id: invite.workspace_id, user_id: user.id, role: 'client' },
+      { workspace_id: invite.workspace_id, user_id: user.id, role },
       { onConflict: 'workspace_id,user_id', ignoreDuplicates: true }
     );
   if (memberErr) fail(memberErr, 'adding you to the workspace');
-  return { workspaceId: invite.workspace_id, created };
+  return { workspaceId: invite.workspace_id, created, role };
 }
 
 async function createChangeRequest(email, workspaceId, payload) {
@@ -627,6 +811,17 @@ module.exports = {
   getMetricsConfig,
   saveMetricsConfig,
   workspaceOwnerEmail,
+  isPlatformAdmin,
+  getWorkspaceById,
+  listAllWorkspaces,
+  createWorkspace,
+  createAdminSession,
+  endAdminSessions,
+  writeAudit,
+  listWorkspaceMembers,
+  addWorkspaceMember,
+  removeWorkspaceMember,
+  getWorkspaceInvite,
   createWorkspaceInvite,
   acceptWorkspaceInvite,
   createChangeRequest,

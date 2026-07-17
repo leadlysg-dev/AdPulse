@@ -460,3 +460,11 @@ body::before,body::after{content:none}
 .ch-heat-dow{font-size:10.5px;font-weight:700;color:var(--ink-faint)}
 .ch-heat-cell{display:block;height:14px;border-radius:3px}
 .ch-heat-hour{height:auto;font-size:9.5px;color:var(--ink-faint);background:none !important}
+
+/* ── Platform admin ───────────────────────────────── */
+.admin-banner{display:flex;align-items:center;gap:14px;background:var(--stage);color:#fff;padding:9px 32px;font-size:13px}
+.admin-banner b{font-weight:700}
+.admin-banner-exit{margin-left:auto;background:#fff;color:var(--stage);border:none}
+.ws-admin{font-weight:700;color:var(--cobalt)}
+.invite-link-row{display:flex;align-items:center;gap:10px;margin:10px 0 4px;background:var(--line-soft);border-radius:var(--r-sm);padding:9px 12px}
+.invite-link{font-size:12px;word-break:break-all;flex:1;font-family:ui-monospace,monospace}

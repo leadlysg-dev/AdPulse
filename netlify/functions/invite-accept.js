@@ -39,14 +39,14 @@ exports.handler = async (event) => {
       });
     }
 
-    const { workspaceId, created } = await acceptWorkspaceInvite(token, email.toLowerCase(), password);
+    const { workspaceId, created, role } = await acceptWorkspaceInvite(token, email.toLowerCase(), password);
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
       multiValueHeaders: {
         'Set-Cookie': [createSessionCookie(email.toLowerCase()), workspaceCookie(workspaceId)]
       },
-      body: JSON.stringify({ ok: true, created })
+      body: JSON.stringify({ ok: true, created, role })
     };
   } catch (err) {
     console.error(`[invite-accept] ${err.message}`);

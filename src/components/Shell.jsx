@@ -133,7 +133,19 @@ export default function Shell({ title, children }) {
     .toUpperCase() || '·';
   const role = ws?.active?.role || 'owner';
   const workspaces = ws?.workspaces || [];
+  const isAdmin = !!status?.isPlatformAdmin;
+  const adminView = !!ws?.active?.adminView;
   const showSwitcher = role === 'owner' && workspaces.length > 1;
+  const showAcctMenu = showSwitcher || isAdmin;
+
+  const exitAdminView = async () => {
+    try {
+      await api.adminExit();
+      window.location.href = '/admin.html';
+    } catch (err) {
+      toast(err.message);
+    }
+  };
   // billing-exempt workspaces never see trial/paywall copy
   const planLine = ws?.active?.billingExempt ? 'Pro · Agency' : 'Free plan';
 
@@ -173,21 +185,27 @@ export default function Shell({ title, children }) {
             <NavItems pathname={pathname} />
           </nav>
           <div className="sidebar-foot">
-            {showSwitcher && wsOpen && (
+            {showAcctMenu && wsOpen && (
               <div className="ws-menu" role="menu">
-                {workspaces.map((w) => (
-                  <button key={w.id} type="button" className={`ws-item${w.id === ws.active.id ? ' on' : ''}`} onClick={() => switchWorkspace(w.id)}>
-                    <span className="dot" aria-hidden="true" />
-                    {w.name}
+                {showSwitcher &&
+                  workspaces.map((w) => (
+                    <button key={w.id} type="button" className={`ws-item${w.id === ws.active.id ? ' on' : ''}`} onClick={() => switchWorkspace(w.id)}>
+                      <span className="dot" aria-hidden="true" />
+                      {w.name}
+                    </button>
+                  ))}
+                {isAdmin && (
+                  <button type="button" className="ws-item ws-admin" onClick={() => (window.location.href = '/admin.html')}>
+                    All workspaces →
                   </button>
-                ))}
+                )}
               </div>
             )}
             <button
               type="button"
               className="acct"
-              onClick={() => (showSwitcher ? setWsOpen((v) => !v) : (window.location.href = '/settings.html'))}
-              title={showSwitcher ? 'Switch workspace' : 'Account settings'}
+              onClick={() => (showAcctMenu ? setWsOpen((v) => !v) : (window.location.href = '/settings.html'))}
+              title={showAcctMenu ? 'Workspaces' : 'Account settings'}
             >
               <div className="avatar">{initials}</div>
               <div>
@@ -205,6 +223,16 @@ export default function Shell({ title, children }) {
         </aside>
 
         <div className="main">
+          {adminView && (
+            <div className="admin-banner" role="status">
+              <span>
+                Viewing <b>{ws?.active?.name}</b> workspace as Leadly
+              </span>
+              <button type="button" className="sbtn sbtn-sm admin-banner-exit" onClick={exitAdminView}>
+                Exit
+              </button>
+            </div>
+          )}
           <header className="topbar">
             <span className="page-title">{title}</span>
             <div className="conn-dots">

@@ -10,6 +10,7 @@ import PulseTab from './pages/app/PulseTab';
 import CampaignsTab from './pages/app/CampaignsTab';
 import StudioTab from './pages/app/StudioTab';
 import AutomationsTab from './pages/app/AutomationsTab';
+import AdminTab from './pages/app/AdminTab';
 import Settings from './pages/Settings';
 import Seo from './pages/Seo';
 import SelectAccount from './pages/SelectAccount';
@@ -58,6 +59,7 @@ const PAGES = [
   ['campaigns', tab('Campaigns', <CampaignsTab />)],
   ['studio', tab('Studio', <StudioTab />)],
   ['automations', tab('Automations', <AutomationsTab />)],
+  ['admin', tab('All workspaces', <AdminTab />)],
   ['settings', tab('Settings', <Settings />)],
   ['seo', tab('Local SEO', <Seo />)],
   ['select-account', <SelectAccount />],

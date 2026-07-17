@@ -2,7 +2,7 @@
 // rate limits stay comfortable, with a per-entity result list. POST
 // { channel, entityType, action, value|percent, entities: [{id, name}],
 //   acknowledged }.
-const { getEmailFromRequest, getUser, createChangeLog } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, getDataUser, createChangeLog } = require('./_store');
 const { executeWrite } = require('./_manage');
 
 const json = (statusCode, body) => ({
@@ -27,7 +27,14 @@ exports.handler = async (event) => {
   const entities = Array.isArray(input.entities) ? input.entities.slice(0, MAX_BULK) : [];
   if (!entities.length) return json(400, { error: 'Nothing selected.' });
 
-  const user = await getUser(email);
+  // Writes act through the workspace owner's tokens for agency/admin
+  // visitors; clients never reach here (their controls are locked, and the
+  // role check below is the server-side guarantee).
+  const workspace = await getWorkspaceFromRequest(event.headers, email);
+  if (workspace.role === 'client' || workspace.role === 'member') {
+    return json(403, { error: 'Your campaigns are managed by Leadly — ask Pulse to request a change.' });
+  }
+  const user = await getDataUser(email, workspace);
   if (!user) return json(401, { error: 'Not logged in.' });
 
   const results = [];

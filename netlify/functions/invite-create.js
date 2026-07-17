@@ -16,13 +16,16 @@ exports.handler = async (event) => {
     // default to the active workspace when none is named
     const workspaceId = body.workspaceId || (await getWorkspaceFromRequest(event.headers, email)).id;
     if (!workspaceId) throw new Error('No workspace to invite into - run migration 011 first.');
-    const token = await createWorkspaceInvite(email, workspaceId);
+    const role = ['owner', 'agency', 'client', 'member'].includes(body.role) ? body.role : 'client';
+    const token = await createWorkspaceInvite(email, workspaceId, role);
     const proto = event.headers['x-forwarded-proto'] || 'https';
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         token,
+        role,
+        expiresInDays: 7,
         url: `${proto}://${event.headers.host}/invite.html?token=${encodeURIComponent(token)}`
       })
     };

@@ -9,7 +9,7 @@
 //
 // Delivery numbers (spend / impressions / clicks) are the same unit on
 // both platforms, so the frontend may blend those freely.
-const { getEmailFromRequest, getUser, saveUser } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, getDataUser, saveUser } = require('./_store');
 const { VALID_RANGES, resolveRange, resolveCustomRange, listDays } = require('./_dates');
 const { metaGet, readRow, sumRows } = require('./_meta');
 const { getSelectedMetrics, extractValues } = require('./_metrics');
@@ -133,7 +133,8 @@ exports.handler = async (event) => {
   const prevDateIndex = Object.fromEntries(prevDates.map((d, i) => [d, i]));
   const window = { range, since, until, prevSince, prevUntil };
 
-  const user = await getUser(email);
+  const workspace = await getWorkspaceFromRequest(event.headers, email);
+  const user = await getDataUser(email, workspace);
   const meta = user.accounts.meta;
   const google = user.accounts.google;
   if (!meta || !meta.selectedAdAccountId) {

@@ -173,16 +173,45 @@ export const api = {
       body: JSON.stringify({ workspaceId })
     }),
 
-  inviteCreate: (workspaceId) =>
+  inviteCreate: (workspaceId, role = 'client') =>
     request('/.netlify/functions/invite-create', {
       method: 'POST',
-      body: JSON.stringify({ workspaceId })
+      body: JSON.stringify({ workspaceId, role })
     }),
+
+  inviteInfo: (token) => request(`/.netlify/functions/invite-info?token=${encodeURIComponent(token)}`),
 
   inviteAccept: (token, email, password) =>
     request('/.netlify/functions/invite-accept', {
       method: 'POST',
       body: JSON.stringify({ token, email, password })
+    }),
+
+  adminWorkspaces: () => request('/.netlify/functions/admin-workspaces'),
+
+  adminWorkspaceCreate: (name, managed) =>
+    request('/.netlify/functions/admin-workspace-create', {
+      method: 'POST',
+      body: JSON.stringify({ name, managed })
+    }),
+
+  adminEnter: (workspaceId) =>
+    request('/.netlify/functions/admin-enter', { method: 'POST', body: JSON.stringify({ workspaceId }) }),
+
+  adminExit: () => request('/.netlify/functions/admin-exit', { method: 'POST', body: '{}' }),
+
+  workspaceMembers: () => request('/.netlify/functions/workspace-members'),
+
+  workspaceMemberAdd: (email, role = 'agency') =>
+    request('/.netlify/functions/workspace-members', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'add', email, role })
+    }),
+
+  workspaceMemberRemove: (email) =>
+    request('/.netlify/functions/workspace-members', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'remove', email })
     }),
 
   changeRequestCreate: (payload) =>

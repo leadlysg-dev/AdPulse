@@ -20,8 +20,12 @@ function loginRedirectUri(headers) {
 exports.handler = async (event) => {
   const qs = event.queryStringParameters || {};
   const next = VALID_NEXT.includes(qs.next) ? qs.next : null;
+  // An invite token riding in the state lets a brand-new person sign up
+  // through Google: the callback claims the invite after Google verifies
+  // the email. Without it, Google sign-in never mints accounts.
+  const invite = qs.invite ? String(qs.invite).slice(0, 64) : null;
 
-  const state = jwt.sign({ purpose: 'google-login', next }, process.env.SESSION_SECRET, {
+  const state = jwt.sign({ purpose: 'google-login', next, invite }, process.env.SESSION_SECRET, {
     expiresIn: '10m'
   });
 

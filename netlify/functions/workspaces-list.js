@@ -12,7 +12,14 @@ exports.handler = async (event) => {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        active: { id: active.id, name: active.name, role: active.role, billingExempt: active.billingExempt },
+        active: {
+          id: active.id,
+          name: active.name,
+          role: active.role,
+          billingExempt: active.billingExempt,
+          managed: active.managed !== false,
+          adminView: !!active.adminView
+        },
         workspaces: active.memberships
       })
     };
