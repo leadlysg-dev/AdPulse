@@ -3,8 +3,11 @@
 // (Email notification to the owner is pending an email provider - the same
 // gap as alert delivery.)
 const { getEmailFromRequest, getWorkspaceFromRequest, createChangeRequest, listChangeRequests } = require('./_store');
+const { demoGuard } = require('./_demoGuard');
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   const email = getEmailFromRequest(event.headers);
   if (!email) return { statusCode: 401, body: 'Not logged in.' };
 

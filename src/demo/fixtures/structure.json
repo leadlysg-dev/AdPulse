@@ -1,0 +1,151 @@
+{
+  "meta": [
+    {
+      "id": "mc1",
+      "name": "Invisalign — Lead Gen",
+      "share": 0.44,
+      "children": [
+        {
+          "id": "mas1",
+          "name": "Lookalike 3% — SG",
+          "share": 0.6,
+          "children": [
+            {
+              "id": "mad1",
+              "name": "Smile transformation UGC",
+              "share": 0.55,
+              "format": "video"
+            },
+            {
+              "id": "mad2",
+              "name": "Before/after carousel",
+              "share": 0.45,
+              "format": "image"
+            }
+          ]
+        },
+        {
+          "id": "mas2",
+          "name": "Retargeting — site visitors",
+          "share": 0.4,
+          "children": [
+            {
+              "id": "mad3",
+              "name": "Patient testimonial 30s",
+              "share": 0.62,
+              "format": "video"
+            },
+            {
+              "id": "mad4",
+              "name": "Free consult static",
+              "share": 0.38,
+              "format": "image"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mc2",
+      "name": "Kids Dentistry — Messages",
+      "share": 0.33,
+      "children": [
+        {
+          "id": "mas3",
+          "name": "Parents 28-45 — 5km radius",
+          "share": 1,
+          "children": [
+            {
+              "id": "mad5",
+              "name": "First visit free check",
+              "share": 0.52,
+              "format": "image"
+            },
+            {
+              "id": "mad6",
+              "name": "Gentle dentist reel",
+              "share": 0.48,
+              "format": "video"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mc3",
+      "name": "Whitening Promo — July",
+      "share": 0.23,
+      "rampFrom": 55,
+      "children": [
+        {
+          "id": "mas4",
+          "name": "Broad — advantage+",
+          "share": 1,
+          "children": [
+            {
+              "id": "mad7",
+              "name": "Whitening offer story",
+              "share": 1,
+              "format": "video"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "google": [
+    {
+      "id": "gc1",
+      "name": "Search — dentist near me",
+      "share": 0.58,
+      "children": [
+        {
+          "id": "gg1",
+          "name": "Emergency + near me terms",
+          "share": 0.55,
+          "children": [
+            {
+              "id": "gad1",
+              "name": "RSA — same-day appointments",
+              "share": 1,
+              "format": "image"
+            }
+          ]
+        },
+        {
+          "id": "gg2",
+          "name": "Invisalign terms",
+          "share": 0.45,
+          "children": [
+            {
+              "id": "gad2",
+              "name": "RSA — invisalign pricing",
+              "share": 1,
+              "format": "image"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gc2",
+      "name": "Search — kids dentist",
+      "share": 0.42,
+      "children": [
+        {
+          "id": "gg3",
+          "name": "Kids + family dentist terms",
+          "share": 1,
+          "children": [
+            {
+              "id": "gad3",
+              "name": "RSA — gentle with kids",
+              "share": 1,
+              "format": "image"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

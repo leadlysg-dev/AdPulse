@@ -80,16 +80,84 @@ ALERTS — when the user wants to be warned about something, propose ONE alert i
 Return ONLY JSON, no markdown fences:
 {"reply":"...","actions":[{"label":"...","kind":"...","request":"only for change_request"}],"alert":{...only when proposing one}}`;
 
+async function askClaude(role, context, message) {
+  const content = `THE USER'S DASHBOARD RIGHT NOW (their real numbers):\n${JSON.stringify(context).slice(0, 14000)}\n\nTHE USER ASKS: ${message}`;
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 700,
+      system: SYSTEM(role),
+      messages: [{ role: 'user', content }]
+    })
+  });
+  if (!r.ok) throw new Error(`Claude ${r.status}`);
+  const d = await r.json();
+  const text = (d.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('');
+  const out = parseJson(text);
+  const actions = Array.isArray(out.actions)
+    ? out.actions
+        .filter((a) => a && ['admanager', 'studio', 'create_alert', 'change_request'].includes(a.kind))
+        .slice(0, 2)
+    : [];
+  return { reply: String(out.reply || text).slice(0, 2000), actions, alert: out.alert || null };
+}
+
+// Demo mode: no session, and the client's context is IGNORED - the server
+// answers from its own fixture summary, so a crafted request can't feed the
+// model someone else's numbers. Replies carry no action buttons (they'd
+// navigate into an app the demo visitor doesn't have) and each IP gets a
+// per-instance hourly cap so the public endpoint can't be farmed.
+const DEMO_LIMIT = 20;
+const demoHits = new Map(); // ip -> { ts, count }
+
+async function demoChat(event, body) {
+  const message = String(body.message || '').slice(0, 600);
+  if (!message.trim()) return json(400, { error: 'Ask something first.' });
+
+  const ip = String(event.headers['x-nf-client-connection-ip'] || event.headers['x-forwarded-for'] || 'unknown')
+    .split(',')[0]
+    .trim();
+  const now = Date.now();
+  if (demoHits.size > 5000) demoHits.clear();
+  const hit = demoHits.get(ip);
+  if (!hit || now - hit.ts > 3600000) demoHits.set(ip, { ts: now, count: 1 });
+  else if (hit.count >= DEMO_LIMIT) return json(429, { error: 'Demo limit reached — sign up free to keep chatting.' });
+  else hit.count += 1;
+
+  if (MOCK) {
+    const m = MOCK_ANSWERS[body.chip] || MOCK_ANSWERS.today;
+    return json(200, { reply: m.reply, actions: [], alert: null });
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return json(200, { reply: 'The assistant isn’t switched on yet — your numbers below are unaffected.', actions: [] });
+  }
+  try {
+    const out = await askClaude('owner', require('./_demoContext.json'), message);
+    return json(200, { reply: out.reply, actions: [], alert: null });
+  } catch (err) {
+    console.error(`[pulse-chat demo] ${err.message}`);
+    return json(200, { reply: 'I couldn’t finish that thought — press the question again in a moment.', actions: [] });
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed.' };
-  const email = getEmailFromRequest(event.headers);
-  if (!email) return { statusCode: 401, body: 'Not logged in.' };
   let body;
   try {
     body = JSON.parse(event.body || '{}');
   } catch {
     return json(400, { error: 'Invalid request.' });
   }
+  if (body.demo === true) return demoChat(event, body);
+
+  const email = getEmailFromRequest(event.headers);
+  if (!email) return { statusCode: 401, body: 'Not logged in.' };
   const message = String(body.message || '').slice(0, 600);
   if (!message.trim()) return json(400, { error: 'Ask something first.' });
 
@@ -111,33 +179,9 @@ exports.handler = async (event) => {
   }
 
   const context = body.context && typeof body.context === 'object' ? body.context : {};
-  const content = `THE USER'S DASHBOARD RIGHT NOW (their real numbers):\n${JSON.stringify(context).slice(0, 14000)}\n\nTHE USER ASKS: ${message}`;
 
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 700,
-        system: SYSTEM(role),
-        messages: [{ role: 'user', content }]
-      })
-    });
-    if (!r.ok) throw new Error(`Claude ${r.status}`);
-    const d = await r.json();
-    const text = (d.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('');
-    const out = parseJson(text);
-    const actions = Array.isArray(out.actions)
-      ? out.actions
-          .filter((a) => a && ['admanager', 'studio', 'create_alert', 'change_request'].includes(a.kind))
-          .slice(0, 2)
-      : [];
-    return json(200, { reply: String(out.reply || text).slice(0, 2000), actions, alert: out.alert || null });
+    return json(200, await askClaude(role, context, message));
   } catch (err) {
     console.error(`[pulse-chat] ${err.message}`);
     return json(200, { reply: 'I couldn’t finish that thought — press the question again in a moment.', actions: [] });

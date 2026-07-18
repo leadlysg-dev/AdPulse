@@ -122,6 +122,9 @@ export default function Login() {
         {/* Invite-only: no public signup. Accounts are created through a
             workspace invite link from the agency. */}
         <p className="login-toggle">New here? Leadly Pulse is invite-only — ask your agency contact for an invite link.</p>
+        <p className="login-toggle">
+          Want a look around first? <a href="/demo">Explore the live demo with sample data</a>.
+        </p>
         </div>
       </div>
     </div>

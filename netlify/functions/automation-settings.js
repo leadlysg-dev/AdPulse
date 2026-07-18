@@ -2,6 +2,7 @@
 // per user. The Automations tab is locked (coming soon) but the settings
 // survive here so switching the tab on later loses nothing.
 const { getEmailFromRequest, getStudioRecord, putStudioRecord } = require('./_store');
+const { demoGuard } = require('./_demoGuard');
 
 const MODULES = ['messaging', 'email', 'winback', 'gmb'];
 const DEFAULTS = { messaging: true, email: true, winback: true, gmb: true };
@@ -13,6 +14,8 @@ const json = (statusCode, body) => ({
 });
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   const email = getEmailFromRequest(event.headers);
   if (!email) return { statusCode: 401, body: 'Not logged in.' };
   try {

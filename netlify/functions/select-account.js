@@ -1,6 +1,9 @@
 const { getEmailFromRequest, getUser, saveUser, clearAiInsightCache } = require('./_store');
+const { demoGuard } = require('./_demoGuard');
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
 
   const email = getEmailFromRequest(event.headers);

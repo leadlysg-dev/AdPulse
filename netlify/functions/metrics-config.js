@@ -3,6 +3,7 @@
 // (Spend, CPM, Impressions, Ad Clicks, CTR, CPC) are always on client-side
 // and never stored here.
 const { getEmailFromRequest, getWorkspaceFromRequest, getMetricsConfig, saveMetricsConfig, getUser, saveUser } = require('./_store');
+const { demoGuard } = require('./_demoGuard');
 
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -60,6 +61,8 @@ async function migrateLegacySelections(email, workspaceId) {
 }
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   const email = getEmailFromRequest(event.headers);
   if (!email) return { statusCode: 401, body: 'Not logged in.' };
   try {

@@ -6,6 +6,7 @@ import { api } from './lib/api';
 import Login from './pages/Login';
 import Invite from './pages/Invite';
 import Shell from './components/Shell';
+import DemoPage from './demo/DemoPage';
 import PulseTab from './pages/app/PulseTab';
 import CampaignsTab from './pages/app/CampaignsTab';
 import StudioTab from './pages/app/StudioTab';
@@ -66,6 +67,17 @@ const PAGES = [
   ['upgrade', tab('Upgrade', <Upgrade />)]
 ];
 
+// The no-auth demo: the same tab components under /demo, wrapped in
+// DemoPage so the request layer serves fixture data instead of the API.
+// No JWT, no session, no database - the auth guard never runs because
+// get-status itself is answered locally.
+const DEMO_PAGES = [
+  ['', 'Pulse', <PulseTab />],
+  ['campaigns', 'Campaigns', <CampaignsTab />],
+  ['automations', 'Automations', <AutomationsTab />],
+  ['studio', 'Studio', <StudioTab />]
+];
+
 const LEGACY = [
   ['dashboard', '/pulse.html'],
   ['reports', '/pulse.html'],
@@ -90,6 +102,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route key={`${name}.html`} path={`/${name}.html`} element={<LegacyRedirect to={to} />} />,
           <Route key={name} path={`/${name}`} element={<LegacyRedirect to={to} />} />
         ])}
+        {DEMO_PAGES.map(([sub, title, node]) => (
+          <Route
+            key={`demo-${sub || 'pulse'}`}
+            path={sub ? `/demo/${sub}` : '/demo'}
+            element={<DemoPage title={title}>{node}</DemoPage>}
+          />
+        ))}
+        <Route path="/demo/*" element={<Navigate to="/demo" replace />} />
         {/* Anything unknown lands where "/" does - never a blank page. */}
         <Route path="*" element={<RootRedirect />} />
       </Routes>

@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useDemo } from '../demo/DemoContext';
+import { DEMO_MESSAGE, DEMO_BLOCKED_EVENT } from '../demo/constants';
 
 // The five-tab dashboard shell from the v5 UI spec: 232px dark sidebar,
 // sticky blurred topbar with connection chips + date range + share, account
@@ -49,8 +51,17 @@ const TABS = [
   { id: 'studio', to: '/studio.html', label: 'Studio', soon: true }
 ];
 
-function NavItems({ pathname, mobile }) {
+// Where each tab lives inside the demo - same components, /demo paths.
+const DEMO_TO = {
+  pulse: '/demo',
+  admanager: '/demo/campaigns',
+  automations: '/demo/automations',
+  studio: '/demo/studio'
+};
+
+function NavItems({ pathname, mobile, demo }) {
   return TABS.map((t) => {
+    const to = demo && t.to ? DEMO_TO[t.id] || t.to : t.to;
     const inner = (
       <>
         {ICONS[t.id]}
@@ -70,10 +81,10 @@ function NavItems({ pathname, mobile }) {
     return (
       <Link
         key={t.id}
-        to={t.to}
-        className={`nav-item${pathname === t.to ? ' active' : ''}`}
+        to={to}
+        className={`nav-item${pathname === to ? ' active' : ''}`}
         role="tab"
-        aria-selected={pathname === t.to}
+        aria-selected={pathname === to}
       >
         {inner}
       </Link>
@@ -83,6 +94,7 @@ function NavItems({ pathname, mobile }) {
 
 export default function Shell({ title, children }) {
   const { pathname } = useLocation();
+  const isDemo = useDemo();
 
   const [status, setStatus] = useState(null);
   const [redirecting, setRedirecting] = useState(false);
@@ -120,6 +132,15 @@ export default function Shell({ title, children }) {
       clearTimeout(toastTimer.current);
     };
   }, []);
+
+  // In demo the request adapter blocks every write and fires this event;
+  // showing the toast here covers callers that swallow errors silently.
+  useEffect(() => {
+    if (!isDemo) return undefined;
+    const onBlocked = () => toast(DEMO_MESSAGE);
+    window.addEventListener(DEMO_BLOCKED_EVENT, onBlocked);
+    return () => window.removeEventListener(DEMO_BLOCKED_EVENT, onBlocked);
+  }, [isDemo, toast]);
 
   if (redirecting) return null;
 
@@ -182,7 +203,7 @@ export default function Shell({ title, children }) {
           </div>
           <nav className="nav" role="tablist" aria-label="Main navigation">
             <div className="nav-label">Workspace</div>
-            <NavItems pathname={pathname} />
+            <NavItems pathname={pathname} demo={isDemo} />
           </nav>
           <div className="sidebar-foot">
             {showAcctMenu && wsOpen && (
@@ -216,13 +237,27 @@ export default function Shell({ title, children }) {
             <button type="button" className="ws-item" onClick={() => (window.location.href = '/settings.html')}>
               Settings
             </button>
-            <a className="ws-item" href="/.netlify/functions/logout">
-              Log out
-            </a>
+            {isDemo ? (
+              <a className="ws-item" href="/login.html">
+                Exit demo
+              </a>
+            ) : (
+              <a className="ws-item" href="/.netlify/functions/logout">
+                Log out
+              </a>
+            )}
           </div>
         </aside>
 
         <div className="main">
+          {isDemo && (
+            <div className="demo-banner" role="status">
+              <span>You&rsquo;re viewing a demo with sample data</span>
+              <a className="sbtn sbtn-sm demo-banner-cta" href="/login.html">
+                Start your 7-day free trial
+              </a>
+            </div>
+          )}
           {adminView && (
             <div className="admin-banner" role="status">
               <span>
@@ -251,7 +286,7 @@ export default function Shell({ title, children }) {
             <div className="tab-pane">{children}</div>
           </main>
           <nav className="mobile-nav" aria-label="Main navigation">
-            <NavItems pathname={pathname} mobile />
+            <NavItems pathname={pathname} mobile demo={isDemo} />
           </nav>
         </div>
       </div>

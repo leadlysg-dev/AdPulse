@@ -2,8 +2,11 @@
 // belongs to the requested workspace - the cookie is set from the validated
 // membership, never from raw input.
 const { getEmailFromRequest, listMemberships, workspaceCookie } = require('./_store');
+const { demoGuard } = require('./_demoGuard');
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed.' };
   const email = getEmailFromRequest(event.headers);
   if (!email) return { statusCode: 401, body: 'Not logged in.' };

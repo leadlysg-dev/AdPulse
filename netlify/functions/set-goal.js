@@ -2,8 +2,11 @@
 // ("cost per lead under $30"). POST { provider, metricId, targetCostPer }
 // where targetCostPer is a positive number, or null to remove the target.
 const { getEmailFromRequest, getUser, saveUser } = require('./_store');
+const { demoGuard } = require('./_demoGuard');
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
 
   const email = getEmailFromRequest(event.headers);

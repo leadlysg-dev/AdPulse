@@ -16,7 +16,22 @@ class ApiError extends Error {
   }
 }
 
+// On /demo routes every call is answered locally by the demo adapter
+// (reads from fixtures, writes blocked, pulse-chat passed through flagged
+// as demo). The adapter is imported on demand, so authenticated sessions
+// never download the demo code and their requests go straight to fetch.
+const onDemoRoute = () =>
+  typeof window !== 'undefined' && /^\/demo(\/|$)/.test(window.location.pathname);
+
 async function request(path, options = {}) {
+  if (onDemoRoute()) {
+    const { demoRequest } = await import('../demo/adapter');
+    return demoRequest(path, options, networkRequest);
+  }
+  return networkRequest(path, options);
+}
+
+async function networkRequest(path, options = {}) {
   let res;
   try {
     res = await fetch(path, options);

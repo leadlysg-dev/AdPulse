@@ -4,6 +4,7 @@
 //   acknowledged }.
 const { getEmailFromRequest, getWorkspaceFromRequest, getDataUser, createChangeLog } = require('./_store');
 const { executeWrite } = require('./_manage');
+const { demoGuard } = require('./_demoGuard');
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -14,6 +15,8 @@ const json = (statusCode, body) => ({
 const MAX_BULK = 25;
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
   const email = getEmailFromRequest(event.headers);
   if (!email) return json(401, { error: 'Not logged in.' });

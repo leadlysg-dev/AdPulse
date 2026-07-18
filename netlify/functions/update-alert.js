@@ -1,6 +1,7 @@
 // Toggle an alert rule on or off. Scoped to the logged-in user - the store
 // layer matches on user id as well as rule id.
 const { getEmailFromRequest, updateAlertRule } = require('./_store');
+const { demoGuard } = require('./_demoGuard');
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -9,6 +10,8 @@ const json = (statusCode, body) => ({
 });
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
 
   const email = getEmailFromRequest(event.headers);

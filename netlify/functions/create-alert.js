@@ -2,8 +2,11 @@
 // same validation and description the assistant's tool path uses.
 const { getEmailFromRequest, getUser, createAlertRule } = require('./_store');
 const { describeRule, validRule } = require('./_alerts');
+const { demoGuard } = require('./_demoGuard');
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   const email = getEmailFromRequest(event.headers);
   if (!email) return { statusCode: 401, body: 'Not logged in.' };

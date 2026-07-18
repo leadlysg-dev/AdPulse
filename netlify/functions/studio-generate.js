@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const store = require('./_store');
 const { loadStudioKeys } = require('./_studioKeys');
 const core = require('./_studioCore');
+const { demoGuard } = require('./_demoGuard');
 
 const MOCK = () => process.env.STUDIO_MOCK === '1';
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -29,6 +30,8 @@ async function extractFileText(file) {
 }
 
 exports.handler = async (event) => {
+  const demoBlocked = demoGuard(event);
+  if (demoBlocked) return demoBlocked;
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed.' };
   const email = store.getEmailFromRequest(event.headers);
   if (!email) return json(401, { error: 'Not logged in.' });
