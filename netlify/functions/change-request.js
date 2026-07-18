@@ -2,7 +2,7 @@
 // Pulse chat lands here as a change_request row for the workspace owner.
 // (Email notification to the owner is pending an email provider - the same
 // gap as alert delivery.)
-const { getEmailFromRequest, getWorkspaceFromRequest, createChangeRequest, listChangeRequests } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, ensureWorkspace, createChangeRequest, listChangeRequests } = require('./_store');
 const { demoGuard } = require('./_demoGuard');
 
 exports.handler = async (event) => {
@@ -12,10 +12,10 @@ exports.handler = async (event) => {
   if (!email) return { statusCode: 401, body: 'Not logged in.' };
 
   try {
-    const workspace = await getWorkspaceFromRequest(event.headers, email);
-    if (!workspace.id) throw new Error('No workspace - run migration 011 first.');
+    let workspace = await getWorkspaceFromRequest(event.headers, email);
 
     if (event.httpMethod === 'GET') {
+      if (!workspace.id) return json(200, { requests: [] });
       // the owner's inbox of open asks
       if (workspace.role !== 'owner') return { statusCode: 403, body: 'Owners only.' };
       const requests = await listChangeRequests(workspace.id);
@@ -23,6 +23,7 @@ exports.handler = async (event) => {
     }
 
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed.' };
+    if (!workspace.id) workspace = await ensureWorkspace(event.headers, email);
     const body = JSON.parse(event.body || '{}');
     if (!body.request || !String(body.request).trim()) {
       return json(400, { error: 'Say what you want changed.' });

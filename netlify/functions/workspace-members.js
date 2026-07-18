@@ -3,7 +3,7 @@
 // admins only - verified against the database, never the request.
 const {
   getEmailFromRequest,
-  getWorkspaceFromRequest,
+  ensureWorkspace,
   listWorkspaceMembers,
   addWorkspaceMember,
   removeWorkspaceMember,
@@ -20,8 +20,7 @@ exports.handler = async (event) => {
   const email = getEmailFromRequest(event.headers);
   if (!email) return json(401, { error: 'Not logged in.' });
   try {
-    const workspace = await getWorkspaceFromRequest(event.headers, email);
-    if (!workspace.id) return json(400, { error: 'No workspace - run migration 011 first.' });
+    const workspace = await ensureWorkspace(event.headers, email);
     const canManage = workspace.role === 'owner' || workspace.role === 'agency' || workspace.adminView;
     if (!canManage) return json(403, { error: 'Only owners and Leadly can manage members.' });
 

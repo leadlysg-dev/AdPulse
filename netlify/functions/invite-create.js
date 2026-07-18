@@ -1,6 +1,6 @@
 // Mint a single-use invite link for a workspace. Owner only - the store
 // enforces the role check against the database, not the request.
-const { getEmailFromRequest, getWorkspaceFromRequest, createWorkspaceInvite } = require('./_store');
+const { getEmailFromRequest, ensureWorkspace, createWorkspaceInvite } = require('./_store');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed.' };
@@ -14,8 +14,7 @@ exports.handler = async (event) => {
   }
   try {
     // default to the active workspace when none is named
-    const workspaceId = body.workspaceId || (await getWorkspaceFromRequest(event.headers, email)).id;
-    if (!workspaceId) throw new Error('No workspace to invite into - run migration 011 first.');
+    const workspaceId = body.workspaceId || (await ensureWorkspace(event.headers, email)).id;
     const role = ['owner', 'agency', 'client', 'member'].includes(body.role) ? body.role : 'client';
     const token = await createWorkspaceInvite(email, workspaceId, role);
     const proto = event.headers['x-forwarded-proto'] || 'https';

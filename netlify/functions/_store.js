@@ -86,6 +86,24 @@ async function getWorkspaceFromRequest(headers, email) {
   return { ...active, memberships };
 }
 
+// Like getWorkspaceFromRequest, but a signed-in user with no membership yet
+// (an account that predates the migration-011 backfill, or was created
+// outside the invite flow) gets a workspace made for them on the spot
+// instead of a dead end. Used by writes that cannot proceed workspace-less.
+// If even the workspaces tables are missing, the migration hint surfaces.
+async function ensureWorkspace(headers, email) {
+  const existing = await getWorkspaceFromRequest(headers, email);
+  if (existing.id) return existing;
+  try {
+    const created = await backend.createWorkspace('Leadly (Agency)', true);
+    await backend.addWorkspaceMember(created.id, email, 'owner');
+    return { id: created.id, role: 'owner', name: created.name, billingExempt: false, memberships: [] };
+  } catch (err) {
+    console.error(`[store] workspace bootstrap failed for ${email}: ${err.message}`);
+    throw new Error('No workspace yet and one could not be created - run the supabase-migrations SQL files (011 through 015) in Supabase, then try again.');
+  }
+}
+
 // The user object whose ad connections this request should read: clients,
 // Leadly teammates (agency role), and admins viewing a workspace all see it
 // through the OWNER's connections - only the owner ever OAuths.
@@ -151,6 +169,7 @@ module.exports = {
   createChangeRequest: backend.createChangeRequest,
   listChangeRequests: backend.listChangeRequests,
   getWorkspaceFromRequest,
+  ensureWorkspace,
   getDataUser,
   workspaceCookie,
   hasSetPassword,

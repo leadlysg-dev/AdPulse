@@ -37,8 +37,8 @@ exports.handler = async (event) => {
   if (!email) return json(401, { error: 'Not logged in.' });
   try {
     const body = JSON.parse(event.body || '{}');
-    const workspace = await store.getWorkspaceFromRequest(event.headers, email);
-    if (!workspace.id) return json(400, { error: 'No workspace - run migration 011 first.' });
+    let workspace = await store.getWorkspaceFromRequest(event.headers, email);
+    if (!workspace.id) workspace = await store.ensureWorkspace(event.headers, email);
 
     const studio = await store.getWorkspaceStudio(workspace.id);
     if (!studio.enabled) return json(403, { error: "Studio isn't unlocked for this workspace yet - ask Leadly." });

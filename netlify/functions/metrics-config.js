@@ -2,7 +2,7 @@
 // re-run only from Settings. Shape documented in migration 013. Defaults
 // (Spend, CPM, Impressions, Ad Clicks, CTR, CPC) are always on client-side
 // and never stored here.
-const { getEmailFromRequest, getWorkspaceFromRequest, getMetricsConfig, saveMetricsConfig, getUser, saveUser } = require('./_store');
+const { getEmailFromRequest, getWorkspaceFromRequest, ensureWorkspace, getMetricsConfig, saveMetricsConfig, getUser, saveUser } = require('./_store');
 const { demoGuard } = require('./_demoGuard');
 
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -96,8 +96,10 @@ exports.handler = async (event) => {
         google: c.primaryResult.google ? { event: String(c.primaryResult.google.event), label: String(c.primaryResult.google.label || '') } : null
       }
     };
-    if (!workspace.id) return json(400, { error: 'No workspace - run migration 011 first.' });
-    await saveMetricsConfig(workspace.id, config);
+    // no membership yet (pre-011 account): make the workspace now rather
+    // than trapping the user in onboarding they can never finish
+    const target = workspace.id ? workspace : await ensureWorkspace(event.headers, email);
+    await saveMetricsConfig(target.id, config);
     await syncConnections(email, config).catch((err) => console.error(`[metrics-config] sync failed: ${err.message}`));
     return json(200, { ok: true, config });
   } catch (err) {
