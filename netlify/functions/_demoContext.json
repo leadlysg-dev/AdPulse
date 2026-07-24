@@ -1,0 +1,57 @@
+{
+  "demoClient": "Northside Dental (sample data)",
+  "range": {
+    "since": "2026-06-18",
+    "until": "2026-07-17",
+    "days": 30
+  },
+  "meta": {
+    "spend": 2172.68,
+    "impressions": 237158,
+    "clicks": 5353,
+    "enquiries_messaging": 156,
+    "leads": 53,
+    "costPerEnquiry": 13.93
+  },
+  "google": {
+    "spend": 1094.61,
+    "impressions": 52678,
+    "clicks": 3223,
+    "calls": 51,
+    "bookingForms": 30,
+    "costPerCall": 21.46
+  },
+  "blended": {
+    "enquiries": 207,
+    "spend": 3267.29,
+    "costPerEnquiry": 15.78
+  },
+  "note": "The Whitening Promo campaign started scaling ~5 weeks ago; Meta cost per enquiry has been improving since.",
+  "campaigns": [
+    {
+      "name": "Invisalign — Lead Gen",
+      "platform": "meta",
+      "shareOfPlatformSpend": 0.44
+    },
+    {
+      "name": "Kids Dentistry — Messages",
+      "platform": "meta",
+      "shareOfPlatformSpend": 0.33
+    },
+    {
+      "name": "Whitening Promo — July",
+      "platform": "meta",
+      "shareOfPlatformSpend": 0.23
+    },
+    {
+      "name": "Search — dentist near me",
+      "platform": "google",
+      "shareOfPlatformSpend": 0.58
+    },
+    {
+      "name": "Search — kids dentist",
+      "platform": "google",
+      "shareOfPlatformSpend": 0.42
+    }
+  ]
+}

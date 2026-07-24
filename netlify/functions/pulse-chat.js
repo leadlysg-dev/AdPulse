@@ -88,6 +88,44 @@ async function askClaude(context, message) {
   return { reply: String(out.reply || text).slice(0, 2000), actions };
 }
 
+// Demo mode: no session, and the client's context is IGNORED - the server
+// answers from its own fixture summary, so a crafted request can't feed the
+// model someone else's numbers. Replies carry no action buttons (they'd
+// navigate into an app the demo visitor doesn't have) and each IP gets a
+// per-instance hourly cap so the public endpoint can't be farmed.
+const DEMO_LIMIT = 20;
+const demoHits = new Map(); // ip -> { ts, count }
+
+async function demoChat(event, body) {
+  const message = String(body.message || '').slice(0, 600);
+  if (!message.trim()) return json(400, { error: 'Ask something first.' });
+
+  const ip = String(event.headers['x-nf-client-connection-ip'] || event.headers['x-forwarded-for'] || 'unknown')
+    .split(',')[0]
+    .trim();
+  const now = Date.now();
+  if (demoHits.size > 5000) demoHits.clear();
+  const hit = demoHits.get(ip);
+  if (!hit || now - hit.ts > 3600000) demoHits.set(ip, { ts: now, count: 1 });
+  else if (hit.count >= DEMO_LIMIT) return json(429, { error: 'Demo limit reached — try again in a bit.' });
+  else hit.count += 1;
+
+  if (MOCK) {
+    const m = MOCK_ANSWERS[body.chip] || MOCK_ANSWERS.today;
+    return json(200, { reply: m.reply, actions: [] });
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return json(200, { reply: 'The assistant isn’t switched on yet — your numbers below are unaffected.', actions: [] });
+  }
+  try {
+    const out = await askClaude(require('./_demoContext.json'), message);
+    return json(200, { reply: out.reply, actions: [] });
+  } catch (err) {
+    console.error(`[pulse-chat demo] ${err.message}`);
+    return json(200, { reply: 'I couldn’t finish that thought — press the question again in a moment.', actions: [] });
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed.' };
   let body;
@@ -96,6 +134,9 @@ exports.handler = async (event) => {
   } catch {
     return json(400, { error: 'Invalid request.' });
   }
+
+  if (body.demo === true) return demoChat(event, body);
+
   const email = getEmailFromRequest(event.headers);
   if (!email) return { statusCode: 401, body: 'Not logged in.' };
   const message = String(body.message || '').slice(0, 600);

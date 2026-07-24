@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useDemo } from '../demo/DemoContext';
+import { DEMO_MESSAGE, DEMO_BLOCKED_EVENT } from '../demo/constants';
 
 // The dashboard shell: 232px dark sidebar, sticky blurred topbar with
 // connection chips, account footer. Tabs render inside.
@@ -26,23 +28,33 @@ const TABS = [
   { id: 'admanager', to: '/campaigns.html', label: 'Campaigns' }
 ];
 
-function NavItems({ pathname, mobile }) {
-  return TABS.map((t) => (
-    <Link
-      key={t.id}
-      to={t.to}
-      className={`nav-item${pathname === t.to ? ' active' : ''}`}
-      role="tab"
-      aria-selected={pathname === t.to}
-    >
-      {ICONS[t.id]}
-      {t.label}
-    </Link>
-  ));
+// Where each tab lives inside the demo - same components, /demo paths.
+const DEMO_TO = {
+  pulse: '/demo',
+  admanager: '/demo/campaigns'
+};
+
+function NavItems({ pathname, mobile, demo }) {
+  return TABS.map((t) => {
+    const to = demo ? DEMO_TO[t.id] || t.to : t.to;
+    return (
+      <Link
+        key={t.id}
+        to={to}
+        className={`nav-item${pathname === to ? ' active' : ''}`}
+        role="tab"
+        aria-selected={pathname === to}
+      >
+        {ICONS[t.id]}
+        {t.label}
+      </Link>
+    );
+  });
 }
 
 export default function Shell({ title, children }) {
   const { pathname } = useLocation();
+  const isDemo = useDemo();
 
   const [status, setStatus] = useState(null);
   const [redirecting, setRedirecting] = useState(false);
@@ -74,6 +86,15 @@ export default function Shell({ title, children }) {
       clearTimeout(toastTimer.current);
     };
   }, []);
+
+  // In demo the request adapter blocks every write and fires this event;
+  // showing the toast here covers callers that swallow errors silently.
+  useEffect(() => {
+    if (!isDemo) return undefined;
+    const onBlocked = () => toast(DEMO_MESSAGE);
+    window.addEventListener(DEMO_BLOCKED_EVENT, onBlocked);
+    return () => window.removeEventListener(DEMO_BLOCKED_EVENT, onBlocked);
+  }, [isDemo, toast]);
 
   if (redirecting) return null;
 
@@ -108,14 +129,18 @@ export default function Shell({ title, children }) {
           </div>
           <nav className="nav" role="tablist" aria-label="Main navigation">
             <div className="nav-label">Workspace</div>
-            <NavItems pathname={pathname} />
+            <NavItems pathname={pathname} demo={isDemo} />
           </nav>
           <div className="sidebar-foot">
             <button
               type="button"
               className="acct"
-              onClick={() => (window.location.href = '/settings.html')}
-              title="Account settings"
+              onClick={() =>
+                // demo must never leave for the real settings page - a
+                // logged-in visitor would land on their own account there
+                isDemo ? toast(DEMO_MESSAGE) : (window.location.href = '/settings.html')
+              }
+              title={isDemo ? 'Sample workspace' : 'Account settings'}
             >
               <div className="avatar">{initials}</div>
               <div>
@@ -123,16 +148,32 @@ export default function Shell({ title, children }) {
                 <div className="acct-plan">Internal</div>
               </div>
             </button>
-            <button type="button" className="ws-item" onClick={() => (window.location.href = '/settings.html')}>
-              Settings
-            </button>
-            <a className="ws-item" href="/.netlify/functions/logout">
-              Log out
-            </a>
+            {!isDemo && (
+              <button type="button" className="ws-item" onClick={() => (window.location.href = '/settings.html')}>
+                Settings
+              </button>
+            )}
+            {isDemo ? (
+              <a className="ws-item" href="/login.html">
+                Exit demo
+              </a>
+            ) : (
+              <a className="ws-item" href="/.netlify/functions/logout">
+                Log out
+              </a>
+            )}
           </div>
         </aside>
 
         <div className="main">
+          {isDemo && (
+            <div className="demo-banner" role="status">
+              <span>You&rsquo;re viewing a demo with sample data</span>
+              <a className="sbtn sbtn-sm demo-banner-cta" href="/login.html">
+                Log in
+              </a>
+            </div>
+          )}
           <header className="topbar">
             <span className="page-title">{title}</span>
             <div className="conn-dots">
@@ -151,7 +192,7 @@ export default function Shell({ title, children }) {
             <div className="tab-pane">{children}</div>
           </main>
           <nav className="mobile-nav" aria-label="Main navigation">
-            <NavItems pathname={pathname} mobile />
+            <NavItems pathname={pathname} mobile demo={isDemo} />
           </nav>
         </div>
       </div>

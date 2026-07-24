@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { useShell } from '../../components/Shell';
+import { useDemo } from '../../demo/DemoContext';
 import DateSelector, { toView } from '../../components/DateSelector';
 import TableControls, { filterPredicate } from '../../components/TableControls';
 import TableScroll from '../../components/TableScroll';
@@ -56,7 +57,8 @@ function BudgetCell({ node, locked, busy, onBudget }) {
 // creative or structural happens on the native platforms.
 export default function CampaignsTab() {
   const { status, toast } = useShell();
-  const locked = false;
+  const isDemo = useDemo();
+  const locked = isDemo;
   const email = status?.email || '';
 
   const [range, setRange] = useState({ key: 'last_7d', label: 'Last 7 days' });

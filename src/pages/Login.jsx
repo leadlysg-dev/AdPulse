@@ -129,6 +129,10 @@ export default function Login() {
             {mode === 'signup' ? 'Log in instead' : 'Create the account'}
           </button>
         </p>
+
+        <p className="login-toggle">
+          Want a look around first? <a href="/demo">Explore the demo with sample data</a>.
+        </p>
         </div>
       </div>
     </div>

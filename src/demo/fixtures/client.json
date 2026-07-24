@@ -1,0 +1,110 @@
+{
+  "workspace": {
+    "id": "demo-ws",
+    "name": "Northside Dental",
+    "role": "owner",
+    "billingExempt": false,
+    "managed": true
+  },
+  "email": "demo@leadly.sg",
+  "accounts": {
+    "meta": {
+      "id": "act_291045518",
+      "name": "Northside Dental — Meta"
+    },
+    "google": {
+      "id": "8846021573",
+      "name": "Northside Dental — Google Ads"
+    }
+  },
+  "metricsConfig": {
+    "extras": [
+      "reach",
+      "video_views"
+    ],
+    "conversions": [
+      {
+        "id": "onsite_conversion.messaging_conversation_started_7d",
+        "label": "Messaging conversations started",
+        "platform": "meta"
+      },
+      {
+        "id": "lead",
+        "label": "Leads",
+        "platform": "meta"
+      },
+      {
+        "id": "customers/8846021573/conversionActions/6413377902",
+        "label": "Calls from ads",
+        "platform": "google"
+      },
+      {
+        "id": "customers/8846021573/conversionActions/6413377917",
+        "label": "Booking form submits",
+        "platform": "google"
+      }
+    ],
+    "primaryResult": {
+      "name": "Enquiries",
+      "source": "platform_event",
+      "meta": {
+        "event": "onsite_conversion.messaging_conversation_started_7d",
+        "label": "Messaging conversations started"
+      },
+      "google": {
+        "event": "customers/8846021573/conversionActions/6413377902",
+        "label": "Calls from ads"
+      }
+    }
+  },
+  "eventLabels": {
+    "onsite_conversion.messaging_conversation_started_7d": "Messaging conversations started",
+    "lead": "Leads",
+    "customers/8846021573/conversionActions/6413377902": "Calls from ads",
+    "customers/8846021573/conversionActions/6413377917": "Booking form submits"
+  },
+  "brandKit": {
+    "color": "#0E7C86",
+    "ink": "#0E1116",
+    "paper": "#FFFFFF",
+    "font": "Figtree, Helvetica, Arial, sans-serif",
+    "logoText": "NORTHSIDE"
+  },
+  "heatProfile": {
+    "hours": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      2,
+      4,
+      6,
+      7,
+      8,
+      9,
+      7,
+      5,
+      4,
+      4,
+      5,
+      7,
+      8,
+      6,
+      4,
+      2,
+      1
+    ],
+    "dows": [
+      8,
+      9,
+      9,
+      8,
+      7,
+      5,
+      4
+    ]
+  }
+}
