@@ -1,7 +1,7 @@
 {
-  "name": "leadly-pulse",
+  "name": "leadly-pulse-internal",
   "version": "1.0.0",
-  "description": "Leadly Pulse - self-serve Meta + Google Ads reporting dashboard SaaS",
+  "description": "leadly-pulse-internal - internal agency dashboard for Meta + Google Ads client reporting",
   "scripts": {
     "dev": "netlify dev",
     "build": "vite build",
@@ -13,11 +13,9 @@
     "@supabase/supabase-js": "^2.110.0",
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^2.7.0",
-    "pdf-parse": "^1.1.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.1",
-    "sharp": "^0.35.3"
+    "react-router-dom": "^7.18.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.3",
